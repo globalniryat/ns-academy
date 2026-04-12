@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef } from "react";
+import Link from "next/link";
 import { motion, useInView } from "framer-motion";
 import { Shield, Lightbulb, Wallet, Clock, RefreshCcw, Heart } from "lucide-react";
 
@@ -123,9 +124,11 @@ export default function WhyUs() {
             </p>
           </div>
           <div className="flex-shrink-0">
-            <div className="bg-green-600 text-white text-sm font-bold px-5 py-2.5 rounded-xl">
-              Risk-Free Enrollment
-            </div>
+            <Link href="/login">
+              <div className="bg-green-600 text-white text-sm font-bold px-5 py-2.5 rounded-xl cursor-pointer hover:bg-green-700 transition-colors">
+                Risk-Free Enrollment
+              </div>
+            </Link>
           </div>
         </motion.div>
       </div>

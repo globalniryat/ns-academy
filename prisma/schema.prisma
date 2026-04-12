@@ -1,0 +1,264 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── ENUMS ────────────────────────────────────────────────
+
+enum Role {
+  STUDENT
+  ADMIN
+}
+
+enum CourseLevel {
+  FOUNDATION
+  INTERMEDIATE
+  FINAL
+}
+
+enum CourseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  COMPLETED
+  EXPIRED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  CREATED
+  AUTHORIZED
+  CAPTURED
+  FAILED
+  REFUNDED
+}
+
+// ─── USER PROFILES ────────────────────────────────────────
+// id matches Supabase auth.users.id (set by database trigger)
+
+model Profile {
+  id        String   @id
+  name      String
+  email     String   @unique
+  phone     String?
+  role      Role     @default(STUDENT)
+  avatarUrl String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  enrollments  Enrollment[]
+  progress     LessonProgress[]
+  certificates Certificate[]
+  payments     Payment[]
+  notes        UserNote[]
+}
+
+// ─── COURSES ──────────────────────────────────────────────
+
+model Course {
+  id               String       @id @default(cuid())
+  slug             String       @unique
+  title            String
+  shortDescription String
+  description      String
+  level            CourseLevel
+  status           CourseStatus @default(DRAFT)
+  price            Int
+  originalPrice    Int
+  duration         String
+  thumbnailUrl     String?
+  freePreviewUrl   String?
+  color            String       @default("#16a34a")
+  instructor       String       @default("CA Nikesh Shah")
+  rating           Float        @default(0)
+  totalRatings     Int          @default(0)
+  whatYoullLearn   String[]
+  metaTitle        String?
+  metaDescription  String?
+  sortOrder        Int          @default(0)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  sections     Section[]
+  enrollments  Enrollment[]
+  certificates Certificate[]
+  payments     Payment[]
+  courseNotes  CourseNote[]
+
+  @@index([status, sortOrder])
+  @@index([slug])
+}
+
+model Section {
+  id        String   @id @default(cuid())
+  courseId  String
+  title     String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  course  Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons Lesson[]
+
+  @@index([courseId, sortOrder])
+}
+
+model Lesson {
+  id            String   @id @default(cuid())
+  sectionId     String
+  title         String
+  description   String?
+  videoUrl      String
+  duration      String?
+  isFreePreview Boolean  @default(false)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  section  Section          @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  progress LessonProgress[]
+
+  @@index([sectionId, sortOrder])
+}
+
+model CourseNote {
+  id        String   @id @default(cuid())
+  courseId  String
+  title     String
+  fileUrl   String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+}
+
+// ─── ENROLLMENT & PROGRESS ────────────────────────────────
+
+model Enrollment {
+  id          String           @id @default(cuid())
+  userId      String
+  courseId    String
+  status      EnrollmentStatus @default(ACTIVE)
+  enrolledAt  DateTime         @default(now())
+  completedAt DateTime?
+  expiresAt   DateTime?
+
+  user   Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@index([userId])
+  @@index([courseId])
+}
+
+model LessonProgress {
+  id             String   @id @default(cuid())
+  userId         String
+  lessonId       String
+  isCompleted    Boolean  @default(false)
+  watchedSeconds Int      @default(0)
+  lastWatchedAt  DateTime @default(now())
+
+  user   Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@index([userId])
+}
+
+model UserNote {
+  id        String   @id @default(cuid())
+  userId    String
+  lessonId  String?
+  courseId  String?
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ─── PAYMENTS ─────────────────────────────────────────────
+
+model Payment {
+  id                String        @id @default(cuid())
+  userId            String
+  courseId          String
+  amount            Int
+  currency          String        @default("INR")
+  status            PaymentStatus @default(CREATED)
+  razorpayOrderId   String?       @unique
+  razorpayPaymentId String?       @unique
+  razorpaySignature String?
+  receiptId         String?
+  failureReason     String?
+  metadata          Json?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  user   Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([razorpayOrderId])
+}
+
+// ─── CERTIFICATES ─────────────────────────────────────────
+
+model Certificate {
+  id            String   @id @default(cuid())
+  userId        String
+  courseId      String
+  certificateNo String   @unique
+  issuedAt      DateTime @default(now())
+  pdfUrl        String?
+
+  user   Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+}
+
+// ─── CMS: SITE CONTENT ────────────────────────────────────
+
+model SiteContent {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  type      String   @default("text")
+  updatedAt DateTime @updatedAt
+
+  @@index([key])
+}
+
+model Testimonial {
+  id        String   @id @default(cuid())
+  name      String
+  college   String?
+  role      String?
+  quote     String
+  rating    Int      @default(5)
+  avatarUrl String?
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([isActive, sortOrder])
+}
+
+model FAQ {
+  id        String   @id @default(cuid())
+  question  String
+  answer    String
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([isActive, sortOrder])
+}

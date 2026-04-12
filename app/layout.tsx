@@ -3,7 +3,6 @@ import { Inter, Playfair_Display, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import { AuthProvider } from "@/lib/auth";
 import { ScrollToTop } from "@/components/ScrollToTop";
 
 const inter = Inter({
@@ -26,15 +25,15 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "CA Portal — Expert CA Coaching Online | Foundation, Inter & Final",
+  title: "NS Academy — CA Finals with Simplified Logic | CA Nikesh Shah",
   description:
-    "Clear your CA exams with structured video courses. Watch free lectures, enroll when ready. Pay once, access forever. Courses for CA Foundation, Intermediate & Final.",
+    "Pass CA Finals with logic-based teaching from CA Nikesh Shah. No memorization required. 100% money-back guarantee. Courses for CA Final SFM and more.",
   keywords:
-    "CA coaching online, CA Foundation course, CA Inter course, CA Final course, ICAI exam preparation",
+    "CA coaching online, CA Final SFM, CA Nikesh Shah, NS Academy, Symbiosis College Pune, CA Finals coaching",
   openGraph: {
-    title: "CA Portal — Expert CA Coaching Online",
+    title: "NS Academy — CA Finals Coaching by CA Nikesh Shah",
     description:
-      "Expert-led video courses for CA Foundation, Intermediate & Final. Watch free lectures, then enroll when ready.",
+      "Logic-first CA Finals coaching. Pass even with zero prior knowledge. 100% money-back guarantee.",
     type: "website",
   },
 };
@@ -50,12 +49,10 @@ export default function RootLayout({
       className={`${inter.variable} ${playfair.variable} ${jakarta.variable} scroll-auto`}
     >
       <body>
-        <AuthProvider>
-          <ScrollToTop />
-          <Navbar />
-          <main>{children}</main>
-          <Footer />
-        </AuthProvider>
+        <ScrollToTop />
+        <Navbar />
+        <main>{children}</main>
+        <Footer />
       </body>
     </html>
   );

@@ -1,7 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Allow YouTube embedded iframes from privacy-enhanced domain
   async headers() {
     return [
       {
@@ -11,12 +10,13 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: https:",
-              "frame-src https://www.youtube-nocookie.com https://www.youtube.com",
-              "connect-src 'self'",
+              "frame-src https://www.youtube-nocookie.com https://www.youtube.com https://api.razorpay.com",
+              "connect-src 'self' https://*.supabase.co https://api.razorpay.com https://lumberjack.razorpay.com",
+              "worker-src blob:",
             ].join("; "),
           },
         ],

@@ -1,34 +1,37 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/client";
 
+// Simplified AuthGuard — middleware handles redirects.
+// This component provides a fallback loading state for client-rendered routes.
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { isLoggedIn, isLoading } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [authenticated, setAuthenticated] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    // Only redirect once we know the hydration state (isLoading = false)
-    if (!isLoading && !isLoggedIn) {
-      router.replace("/login?redirect=" + encodeURIComponent(window.location.pathname));
-    }
-  }, [isLoading, isLoggedIn, router]);
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        setAuthenticated(true);
+      } else {
+        router.replace("/login?redirect=" + encodeURIComponent(window.location.pathname));
+      }
+      setLoading(false);
+    });
+  }, [router]);
 
-  // While hydrating from localStorage, show a spinner — NOT a redirect
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-offwhite">
-        <div className="text-center">
-          <div className="w-10 h-10 border-3 border-blue border-t-transparent rounded-full animate-spin mx-auto mb-4" style={{ borderWidth: "3px" }} />
-          <p className="text-muted text-sm">Loading...</p>
-        </div>
+        <div className="w-8 h-8 border-2 border-blue border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
-  // Not logged in after hydration → redirect already triggered above
-  if (!isLoggedIn) return null;
+  if (!authenticated) return null;
 
   return <>{children}</>;
 }

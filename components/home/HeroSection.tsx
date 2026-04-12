@@ -85,13 +85,17 @@ export default function HeroSection() {
 
             {/* CTAs */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
-              <Link href="/courses/ca-final-strategic">
+              <Link href="/checkout/course_sfm_001">
                 <Button size="lg" variant="default" className="gap-2" id="hero-enroll-now">
                   Enroll Now
                   <ArrowRight className="w-5 h-5" />
                 </Button>
               </Link>
-              <Link href="/courses/ca-final-strategic">
+              <a
+                href="https://youtu.be/psQaSIotMv4"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 <Button
                   size="lg"
                   variant="outline"
@@ -101,7 +105,7 @@ export default function HeroSection() {
                   <Play className="w-5 h-5" />
                   Watch Free Lecture
                 </Button>
-              </Link>
+              </a>
             </div>
           </motion.div>
 
@@ -123,6 +127,7 @@ export default function HeroSection() {
                     src="/nikesh-shah.png"
                     alt="CA Nikesh Shah — CA Final SFM Educator"
                     fill
+                    sizes="(max-width: 768px) 100vw, 50vw"
                     className="object-cover object-top"
                     priority
                   />

@@ -1,17 +1,28 @@
 @import "tailwindcss";
 
 @theme {
-  --color-navy: #1A2744;
-  --color-blue: #2563EB;
-  --color-teal: #0D9488;
-  --color-gold: #D4A843;
-  --color-offwhite: #F7F8FA;
-  --color-bodytext: #334155;
-  --color-muted: #94A3B8;
-  --font-sans: var(--font-inter), system-ui, sans-serif;
-  --font-serif: var(--font-display), Georgia, serif;
+  /* ── PRIMARY GREENS (NS Academy brand) ───────────────────── */
+  --color-primary:       #16a34a;   /* green-600 — primary action */
+  --color-primary-dark:  #166534;   /* green-800 — hover states */
+  --color-primary-deep:  #052e16;   /* green-950 — footer, dark bg */
+
+  /* Semantic aliases — existing components use these names unchanged */
+  --color-navy:     #052e16;   /* → green-950 */
+  --color-blue:     #16a34a;   /* → green-600 (primary) */
+  --color-teal:     #15803d;   /* → green-700 */
+  --color-gold:     #d97706;   /* → amber-600 */
+
+  /* ── NEUTRAL SURFACES ────────────────────────────────────── */
+  --color-offwhite:  #F7F8FA;
+  --color-bodytext:  #334155;
+  --color-muted:     #94A3B8;
+
+  /* ── TYPOGRAPHY ──────────────────────────────────────────── */
+  --font-sans:    var(--font-inter), system-ui, sans-serif;
+  --font-serif:   var(--font-display), Georgia, serif;
   --font-display: var(--font-display), Georgia, serif;
   --font-heading: var(--font-heading), system-ui, sans-serif;
+
   --radius: 0.75rem;
 }
 
@@ -24,8 +35,16 @@
     scroll-behavior: smooth;
   }
 
+  button,
+  a,
+  [role="button"],
+  label[for],
+  select {
+    cursor: pointer;
+  }
+
   body {
-    background-color: #F7F8FA;
+    background-color: #ffffff;
     color: #334155;
     font-family: var(--font-inter), system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
@@ -33,23 +52,23 @@
   }
 }
 
-/* Grid pattern for hero */
+/* ── HERO GRID PATTERN ────────────────────────────────────── */
 .hero-grid-pattern {
   background-image:
-    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
   background-size: 40px 40px;
 }
 
-/* Gradient text */
+/* ── GRADIENT TEXT ────────────────────────────────────────── */
 .gradient-text {
-  background: linear-gradient(135deg, #60A5FA 0%, #34D399 100%);
+  background: linear-gradient(135deg, #4ade80 0%, #86efac 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-/* Custom scrollbar */
+/* ── CUSTOM SCROLLBAR ─────────────────────────────────────── */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -61,10 +80,10 @@
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #2563EB;
+  background: #16a34a;
 }
 
-/* Video container 16:9 */
+/* ── VIDEO CONTAINER 16:9 ─────────────────────────────────── */
 .video-container {
   position: relative;
   padding-bottom: 56.25%;
@@ -81,7 +100,7 @@
   border: 0;
 }
 
-/* Progress bar */
+/* ── PROGRESS BAR ─────────────────────────────────────────── */
 .progress-bar {
   height: 6px;
   border-radius: 3px;
@@ -91,21 +110,35 @@
 .progress-fill {
   height: 100%;
   border-radius: 3px;
-  background: linear-gradient(90deg, #2563EB, #0D9488);
+  background: linear-gradient(90deg, #16a34a, #15803d);
   transition: width 0.5s ease;
 }
 
-/* Card hover */
+/* ── CARD HOVER ───────────────────────────────────────────── */
 .card-hover {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 .card-hover:hover {
   transform: translateY(-4px);
-  box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.08);
 }
 
-/* Sticky navbar */
+/* ── STICKY NAVBAR ────────────────────────────────────────── */
 .navbar-sticky {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+}
+
+/* ── LINE CLAMP UTILITY ───────────────────────────────────── */
+.line-clamp-2 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.line-clamp-3 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
