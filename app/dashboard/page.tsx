@@ -1,16 +1,16 @@
-"use client";
-
-import React, { useState, useEffect } from "react";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
   BookOpen, PlayCircle, Trophy, ChevronRight, TrendingUp,
-  Clock, Award, LogOut, User, Download, Sparkles,
+  Clock, Award, Download, Sparkles, User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { prisma } from "@/lib/prisma";
+import { LogoutButton } from "./DashboardClient";
 
+// ── Types ──────────────────────────────────────────────────────────────
 type LevelVariant = "foundation" | "intermediate" | "final";
 const levelVariantMap: Record<string, LevelVariant> = {
   FOUNDATION: "foundation", INTERMEDIATE: "intermediate", FINAL: "final",
@@ -19,69 +19,106 @@ const levelLabel: Record<string, string> = {
   FOUNDATION: "Foundation", INTERMEDIATE: "Intermediate", FINAL: "Final",
 };
 
-interface Enrollment {
-  id: string; status: string; certificateId: string | null;
-  course: { id: string; slug: string; title: string; level: string; duration: string; color: string; };
-  progress: { completed: number; total: number; percent: number; };
-}
-interface Certificate {
-  id: string; certificateNo: string; issuedAt: string; course: { title: string };
-}
-
 const statCards = [
-  { label: "Enrolled",      icon: BookOpen,    iconColor: "text-blue-400"    },
-  { label: "Completed",     icon: PlayCircle,  iconColor: "text-emerald-400" },
-  { label: "In Progress",   icon: TrendingUp,  iconColor: "text-violet-400"  },
-  { label: "Certificates",  icon: Award,       iconColor: "text-amber-400"   },
+  { label: "Enrolled",     icon: BookOpen,   iconColor: "text-blue-400"    },
+  { label: "Completed",    icon: PlayCircle, iconColor: "text-emerald-400" },
+  { label: "In Progress",  icon: TrendingUp, iconColor: "text-violet-400"  },
+  { label: "Certificates", icon: Award,      iconColor: "text-amber-400"   },
 ];
 
-export default function DashboardPage() {
-  const [user, setUser] = useState<{ name: string; email: string; initials: string } | null>(null);
-  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
-  const [certificates, setCertificates] = useState<Certificate[]>([]);
-  const [loading, setLoading] = useState(true);
-  const router = useRouter();
+// ── Server-side data fetching ───────────────────────────────────────────
+async function getDashboardData(userId: string) {
+  // Single batched query: enrollments + all lesson IDs + certificates
+  const [enrollments, certificates] = await Promise.all([
+    prisma.enrollment.findMany({
+      where: { userId, status: { in: ["ACTIVE", "COMPLETED"] } },
+      include: {
+        course: {
+          include: {
+            sections: { include: { lessons: { select: { id: true } } } },
+          },
+        },
+      },
+      orderBy: { enrolledAt: "desc" },
+    }),
+    prisma.certificate.findMany({
+      where: { userId },
+      include: { course: { select: { title: true, slug: true } } },
+      orderBy: { issuedAt: "desc" },
+    }),
+  ]);
 
-  useEffect(() => {
-    const supabase = createClient();
-    async function loadData() {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser) { router.push("/login?redirect=/dashboard"); return; }
-      const displayName = authUser.user_metadata?.full_name || authUser.email?.split("@")[0] || "Student";
-      const initials = displayName.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase();
-      setUser({ name: displayName, email: authUser.email || "", initials });
-      const [enrollRes, certRes] = await Promise.all([fetch("/api/enrollments"), fetch("/api/certificates")]);
-      if (enrollRes.ok) { const d = await enrollRes.json(); setEnrollments(d.data || []); }
-      if (certRes.ok)   { const d = await certRes.json();  setCertificates(d.data  || []); }
-      setLoading(false);
-    }
-    loadData();
-  }, [router]);
+  // Collect ALL lesson IDs across all enrollments in one go
+  const allLessonIds = enrollments.flatMap((e) =>
+    e.course.sections.flatMap((s) => s.lessons.map((l) => l.id))
+  );
 
-  const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/"); router.refresh();
-  };
+  // ONE query for all progress (replaces N separate queries)
+  const completedProgress = await prisma.lessonProgress.groupBy({
+    by: ["lessonId"],
+    where: { userId, lessonId: { in: allLessonIds }, isCompleted: true },
+    _count: { lessonId: true },
+  });
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-      </div>
+  const completedSet = new Set(completedProgress.map((p) => p.lessonId));
+  const certByCourseId = new Map(certificates.map((c) => [c.courseId, c.id]));
+
+  const enrichedEnrollments = enrollments.map((enrollment) => {
+    const lessonIds = enrollment.course.sections.flatMap((s) =>
+      s.lessons.map((l) => l.id)
     );
-  }
+    const completedCount = lessonIds.filter((id) => completedSet.has(id)).length;
+    const totalLessons = lessonIds.length;
+    const percent = totalLessons > 0
+      ? Math.round((completedCount / totalLessons) * 100)
+      : 0;
 
-  const totalCompleted   = enrollments.reduce((s, e) => s + e.progress.completed, 0);
-  const inProgressCount  = enrollments.filter(e => e.status === "ACTIVE").length;
-  const statValues       = [enrollments.length, totalCompleted, inProgressCount, certificates.length];
+    return {
+      id: enrollment.id,
+      status: enrollment.status,
+      certificateId: certByCourseId.get(enrollment.course.id) ?? null,
+      course: {
+        id:           enrollment.course.id,
+        slug:         enrollment.course.slug,
+        title:        enrollment.course.title,
+        level:        enrollment.course.level,
+        duration:     enrollment.course.duration,
+        color:        enrollment.course.color,
+      },
+      progress: { completed: completedCount, total: totalLessons, percent },
+    };
+  });
+
+  return { enrollments: enrichedEnrollments, certificates };
+}
+
+// ── Page (Server Component) ─────────────────────────────────────────────
+export default async function DashboardPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) redirect("/login?redirect=/dashboard");
+
+  const displayName =
+    user.user_metadata?.full_name || user.email?.split("@")[0] || "Student";
+  const initials = displayName
+    .split(" ")
+    .map((n: string) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  const { enrollments, certificates } = await getDashboardData(user.id);
+
+  const totalCompleted  = enrollments.reduce((s, e) => s + e.progress.completed, 0);
+  const inProgressCount = enrollments.filter((e) => e.status === "ACTIVE").length;
+  const statValues      = [enrollments.length, totalCompleted, inProgressCount, certificates.length];
 
   return (
     <div className="min-h-screen bg-slate-50 pt-16">
 
       {/* ── Hero header ── */}
       <div className="relative bg-gradient-to-br from-[#0a1628] via-[#0d2240] to-[#0a1628] overflow-hidden">
-        {/* Decorative blobs */}
         <div className="absolute -top-24 -right-24 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
         <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-violet-500/10 rounded-full blur-3xl" />
         <div className="absolute inset-0 hero-grid-pattern opacity-10" />
@@ -91,30 +128,23 @@ export default function DashboardPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-10">
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shadow-lg text-white font-bold text-lg ring-2 ring-white/20">
-                {user?.initials || <User className="w-7 h-7" />}
+                {initials || <User className="w-7 h-7" />}
               </div>
               <div>
                 <p className="text-slate-400 text-xs font-semibold uppercase tracking-widest mb-0.5">
                   Welcome back
                 </p>
-                <h1 className="font-heading text-2xl font-bold text-white">
-                  {user?.name}
-                </h1>
+                <h1 className="font-heading text-2xl font-bold text-white">{displayName}</h1>
               </div>
             </div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 text-slate-400 hover:text-white text-sm transition-colors self-start sm:self-auto"
-              id="dashboard-logout"
-            >
-              <LogOut className="w-4 h-4" /> Logout
-            </button>
+            <LogoutButton />
           </div>
 
           {/* Stat cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {statCards.map((s, i) => (
-              <div key={s.label}
+              <div
+                key={s.label}
                 className="relative rounded-2xl p-5 overflow-hidden hover:scale-[1.02] transition-transform duration-300"
                 style={{
                   background: "rgba(255,255,255,0.07)",
@@ -124,17 +154,14 @@ export default function DashboardPage() {
                   boxShadow: "0 4px 24px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.1)",
                 }}
               >
-                {/* Shine line at top */}
                 <div className="absolute top-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
-
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
                   style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.15)" }}
                 >
                   <s.icon className={`w-5 h-5 ${s.iconColor}`} />
                 </div>
-                <div className="text-3xl font-heading font-bold text-white mb-1">
-                  {statValues[i]}
-                </div>
+                <div className="text-3xl font-heading font-bold text-white mb-1">{statValues[i]}</div>
                 <div className="text-white/50 text-xs font-semibold uppercase tracking-wider">{s.label}</div>
               </div>
             ))}
@@ -170,14 +197,12 @@ export default function DashboardPage() {
                 const isComplete = enrollment.status === "COMPLETED";
                 const pct = enrollment.progress.percent;
                 return (
-                  <div key={enrollment.id}
+                  <div
+                    key={enrollment.id}
                     className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300"
                   >
-                    {/* Colour bar */}
                     <div className="h-1.5 w-full" style={{ background: enrollment.course.color }} />
-
                     <div className="p-6">
-                      {/* Course header */}
                       <div className="flex items-start gap-4 mb-5">
                         <div
                           className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm"
@@ -204,10 +229,7 @@ export default function DashboardPage() {
                           <span className="text-slate-500 font-medium">
                             {enrollment.progress.completed} of {enrollment.progress.total} lessons
                           </span>
-                          <span
-                            className="font-bold"
-                            style={{ color: isComplete ? "#16a34a" : enrollment.course.color }}
-                          >
+                          <span className="font-bold" style={{ color: isComplete ? "#16a34a" : enrollment.course.color }}>
                             {pct}%
                           </span>
                         </div>
@@ -269,16 +291,14 @@ export default function DashboardPage() {
               </div>
               <h2 className="font-heading text-xl font-bold text-slate-800">My Certificates</h2>
             </div>
-
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {certificates.map((cert) => (
-                <div key={cert.id}
+                <div
+                  key={cert.id}
                   className="relative bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-100 rounded-2xl p-5 overflow-hidden shadow-sm hover:shadow-md transition-shadow"
                 >
-                  {/* Background decoration */}
                   <div className="absolute -top-6 -right-6 w-24 h-24 bg-amber-200/30 rounded-full" />
                   <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-amber-300/20 rounded-full" />
-
                   <div className="relative flex items-center gap-4">
                     <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
                       <Award className="w-6 h-6 text-white" />

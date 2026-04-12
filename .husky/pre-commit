@@ -1,0 +1,7 @@
+#!/bin/sh
+# Run unit + API tests before every commit.
+# Fast path: only runs Vitest (no E2E) to keep commits snappy.
+# Full E2E suite runs in CI on push.
+
+echo "▶ Running unit & API tests (pre-commit)..."
+npm run test
