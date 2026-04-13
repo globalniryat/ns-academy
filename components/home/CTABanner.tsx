@@ -40,7 +40,7 @@ export default function CTABanner() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
-            <Link href="/courses/ca-final-strategic">
+            <Link href="/checkout/course_sfm_001">
               <Button
                 size="lg"
                 variant="navy"
@@ -51,7 +51,11 @@ export default function CTABanner() {
                 <ArrowRight className="w-5 h-5" />
               </Button>
             </Link>
-            <Link href="/courses/ca-final-strategic">
+            <a
+              href="https://youtu.be/psQaSIotMv4"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               <Button
                 size="lg"
                 className="gap-2 bg-white/20 text-navy border-2 border-navy/20 hover:bg-white/30"
@@ -59,7 +63,7 @@ export default function CTABanner() {
               >
                 Watch Free Lecture First
               </Button>
-            </Link>
+            </a>
           </div>
 
           {/* Trust row */}

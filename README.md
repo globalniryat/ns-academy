@@ -1,124 +1,288 @@
-# CA Learning Portal
+# NS Academy — CA Learning Portal
 
-A professional online learning platform for CA (Chartered Accountant) exam preparation, built by **CA Nikesh Shah**. The portal offers structured, logic-first video courses for CA Final — designed to take students from zero prior knowledge to exam-confident.
-
----
-
-## 🚀 Tech Stack
-
-| Layer | Technology |
-|---|---|
-| Framework | Next.js 16.2 (App Router, Turbopack) |
-| Language | TypeScript 5 |
-| Styling | Tailwind CSS v4 (custom `@theme` tokens) |
-| Animation | Framer Motion 12 |
-| UI Primitives | Radix UI (Dialog, Accordion, Slot, etc.) |
-| Component Variants | Class Variance Authority (CVA) |
-| Icons | Lucide React |
-| Fonts | Inter, Playfair Display, Plus Jakarta Sans (via Google Fonts) |
-| State / Auth | React Context + `localStorage` (client-side only, no backend) |
+A full-stack EdTech platform for CA (Chartered Accountant) exam preparation, built by **CA Nikesh Shah**. The portal offers structured, logic-first video courses for CA Final, with real payments, progress tracking, and certificate generation.
 
 ---
 
-## 📁 Project Structure
+## Tech Stack
+
+| Layer | Technology | Version |
+|---|---|---|
+| Framework | Next.js (App Router, Turbopack) | 16.2.3 |
+| Language | TypeScript | 5 |
+| Styling | Tailwind CSS v4 (custom `@theme` tokens) | 4 |
+| Animation | Framer Motion | 12 |
+| UI Primitives | Radix UI (Dialog, Accordion, Slot, etc.) | latest |
+| Component Variants | Class Variance Authority (CVA) | 0.7 |
+| Icons | Lucide React | latest |
+| Database | PostgreSQL (via Supabase) | — |
+| ORM | Prisma 7 (with `PrismaClient` + `PrismaPg` adapter) | 7.7 |
+| Auth | Supabase Auth (email/password + Google OAuth) | 2.x |
+| Payments | Razorpay | 2.9 |
+| PDF Generation | @react-pdf/renderer | 4.4 |
+| Validation | Zod | 4 |
+| Runtime | React 19 | 19.2 |
+
+---
+
+## Architecture Overview
+
+The app follows the **Next.js App Router** pattern with a strict SSR/CSR split:
+
+- **Server Components** handle all data fetching (Prisma queries run on the server — no API round-trips for page loads)
+- **Client Components** (`"use client"`) are used only for interactivity: payment flow, course player controls, forms, and admin CRUD UIs
+- **ISR (Incremental Static Regeneration)** is used on public pages (`revalidate = 60`) to serve cached HTML with periodic background refresh
+- **API Routes** (`app/api/`) are used only for mutations and browser-initiated requests (payment, progress, notes, admin operations)
+
+### SSR/CSR split by page
+
+| Page | Rendering | Why |
+|---|---|---|
+| Homepage | Server + ISR | Static-ish content, fast load |
+| Course listing | Server + ISR | Public data, SEO |
+| Course detail | Server + ISR | SEO + structured data |
+| Dashboard | Server Component | Auth-gated, user-specific data |
+| Course player | Server → Client | Server fetches course + progress, client handles video/notes/progress interactivity |
+| Checkout | Server → Client | Server fetches course + user, client handles Razorpay |
+| Admin panel | Client Component | Heavy interactivity, not public |
+
+---
+
+## Project Structure
 
 ```
 portal/
-├── app/                        # Next.js App Router pages
-│   ├── layout.tsx              # Root layout (Navbar, Footer, AuthProvider)
-│   ├── globals.css             # Design system: tokens, utilities, animations
-│   ├── page.tsx                # Homepage
+├── app/
+│   ├── layout.tsx                    # Root layout (Navbar, Footer)
+│   ├── globals.css                   # Design tokens, utility classes, animations
+│   ├── page.tsx                      # Homepage (Server, ISR)
+│   │
 │   ├── courses/
-│   │   ├── page.tsx            # All Courses listing
-│   │   └── [slug]/page.tsx     # Course detail page
+│   │   ├── page.tsx                  # All courses listing (Server, ISR)
+│   │   ├── CoursesClient.tsx         # Filter tabs (Client)
+│   │   └── [slug]/
+│   │       ├── page.tsx              # Course detail (Server, ISR + generateMetadata)
+│   │       └── CourseDetailClient.tsx # Accordion curriculum (Client)
+│   │
 │   ├── checkout/
-│   │   └── [courseId]/page.tsx # Payment / checkout page
+│   │   └── [courseId]/
+│   │       ├── page.tsx              # Auth-gated checkout (Server)
+│   │       └── CheckoutClient.tsx    # Razorpay integration (Client)
+│   │
 │   ├── dashboard/
-│   │   └── page.tsx            # Student dashboard
-│   ├── payment-success/
-│   │   └── page.tsx            # Post-payment confirmation page
-│   ├── login/page.tsx          # Student login
-│   ├── register/page.tsx       # Student registration
-│   ├── blog/                   # Blog (placeholder)
-│   ├── privacy/page.tsx        # Privacy Policy
-│   ├── terms/page.tsx          # Terms of Service
-│   └── refund/page.tsx         # Refund Policy
+│   │   ├── page.tsx                  # Student dashboard (Server, Prisma direct)
+│   │   ├── DashboardClient.tsx       # Logout button only (Client)
+│   │   └── [courseId]/
+│   │       ├── page.tsx              # Course player shell (Server)
+│   │       └── CoursePlayerClient.tsx # Video + progress + notes (Client)
+│   │
+│   ├── payment-success/page.tsx      # Payment confirmation (Client — useSearchParams)
+│   ├── verify/[certificateNo]/page.tsx # Certificate verification (Server)
+│   │
+│   ├── login/page.tsx                # Supabase email/Google login
+│   ├── register/page.tsx             # Supabase registration
+│   ├── forgot-password/page.tsx
+│   ├── reset-password/page.tsx
+│   │
+│   ├── (admin)/admin/                # Admin panel (all Client Components)
+│   │   ├── layout.tsx                # Admin auth guard + sidebar
+│   │   ├── login/page.tsx            # Separate admin login
+│   │   ├── page.tsx                  # Dashboard stats (Server)
+│   │   ├── courses/                  # Course CRUD
+│   │   ├── students/                 # Student management
+│   │   ├── payments/                 # Payment history
+│   │   ├── content/page.tsx          # Site content CMS
+│   │   ├── testimonials/page.tsx     # Testimonial management
+│   │   ├── faqs/page.tsx             # FAQ management
+│   │   └── settings/page.tsx         # Admin settings
+│   │
+│   └── api/
+│       ├── courses/                  # Public course API
+│       ├── enrollments/              # Enrollment read
+│       ├── certificates/             # Certificate info + PDF download
+│       ├── progress/                 # Mark lesson complete
+│       ├── notes/                    # Per-lesson user notes (CRUD)
+│       ├── payments/
+│       │   ├── create-order/         # Create Razorpay order
+│       │   └── verify/               # Verify signature + enroll
+│       ├── testimonials/             # Public testimonials
+│       ├── faqs/                     # Public FAQs
+│       ├── content/                  # Public site content
+│       └── admin/                    # Admin-only CRUD APIs (requireAdmin guard)
 │
 ├── components/
 │   ├── layout/
-│   │   ├── Navbar.tsx          # Sticky top nav with scroll-aware styling
-│   │   └── Footer.tsx          # Full-width footer with links & socials
-│   ├── home/                   # Homepage section components
-│   │   ├── HeroSection.tsx     # Full-screen hero with instructor photo + video
-│   │   ├── StatsBar.tsx        # 4-stat quick-facts strip
-│   │   ├── InstructorProfile.tsx # CA Nikesh Shah bio, philosophy, credentials
-│   │   ├── FeaturedCourse.tsx  # Single featured course card with CTA
-│   │   ├── WhyUs.tsx           # 6-feature grid + money-back banner
-│   │   ├── Testimonials.tsx    # 6 student reviews (Symbiosis Pune + others)
-│   │   ├── CTABanner.tsx       # Final CTA strip (gold gradient)
-│   │   ├── HowItWorks.tsx      # 4-step process (currently unused on homepage)
-│   │   └── PricingSection.tsx  # Pricing tiers (currently unused on homepage)
-│   ├── courses/
-│   │   └── CourseCard.tsx      # Reusable card for course listings
-│   ├── auth/
-│   │   └── AuthGuard.tsx       # Route guard: redirects unauthenticated users
-│   └── ui/                     # Primitive UI components
-│       ├── button.tsx          # CVA-based Button with 7 variants
-│       ├── card.tsx            # Card, CardHeader, CardContent, CardFooter
-│       ├── badge.tsx           # Level badges (Foundation/Intermediate/Final)
-│       ├── input.tsx           # Styled text input
-│       └── label.tsx           # Form label
+│   │   ├── Navbar.tsx                # Sticky nav, scroll-aware, mobile drawer
+│   │   └── Footer.tsx                # Full footer with links + socials
+│   ├── home/                         # Homepage section components
+│   │   ├── HeroSection.tsx
+│   │   ├── StatsBar.tsx
+│   │   ├── InstructorProfile.tsx
+│   │   ├── FeaturedCourse.tsx
+│   │   ├── WhyUs.tsx
+│   │   ├── Testimonials.tsx
+│   │   ├── FAQSection.tsx
+│   │   └── CTABanner.tsx
+│   ├── admin/                        # Admin UI components (StatsCard, etc.)
+│   └── ui/                           # Primitive UI components
+│       ├── button.tsx                # CVA button with loading spinner
+│       ├── badge.tsx                 # Level badges
+│       ├── input.tsx
+│       └── label.tsx
 │
 ├── lib/
-│   ├── auth.tsx                # AuthContext, AuthProvider, useAuth hook
-│   ├── courses.ts              # Course data, VIDEO_IDs map, types
-│   └── utils.ts                # `cn()` utility (clsx + tailwind-merge)
+│   ├── prisma.ts                     # Prisma singleton with PrismaPg adapter
+│   ├── admin-auth.ts                 # requireAdmin() guard for API routes
+│   ├── razorpay.ts                   # Razorpay client
+│   ├── content.ts                    # SiteContent helpers
+│   ├── validations.ts                # Zod schemas
+│   └── utils.ts                      # cn() utility (clsx + tailwind-merge)
 │
+├── lib/supabase/
+│   ├── server.ts                     # createClient() for Server Components + API routes
+│   └── client.ts                     # createBrowserClient() for Client Components
+│
+├── prisma/
+│   ├── schema.prisma                 # Database schema
+│   └── seed.ts                       # Seed script
+│
+├── prisma.config.ts                  # Prisma 7 config (uses DIRECT_URL for CLI)
 ├── public/
-│   ├── nikesh-shah.png         # Instructor profile photo
-│   └── upi-qr.png              # UPI payment QR code
-│
-├── tailwind.config.ts          # Tailwind v4 config (minimal — tokens in CSS)
-├── next.config.ts              # CSP headers for YouTube iframes
-└── tsconfig.json
+│   ├── nikesh-shah.png               # Instructor photo
+│   └── meta.json                     # Prevents Razorpay 404 on /meta.json
+├── next.config.ts                    # CSP headers + image domains
+└── tailwind.config.ts
 ```
 
 ---
 
-## 🎨 Design System
+## Database Schema
 
-All design tokens are defined in `app/globals.css` under `@theme`:
+PostgreSQL via Supabase, managed by Prisma 7.
+
+### Models
+
+| Model | Purpose |
+|---|---|
+| `Profile` | Mirror of `auth.users` — created by DB trigger on signup. Stores name, email, phone, role |
+| `Course` | Course metadata: title, slug, price (paise), level, status, color, SEO fields |
+| `Section` | Course chapters, ordered by `sortOrder` |
+| `Lesson` | Individual video lessons with YouTube URL, duration, free preview flag |
+| `CourseNote` | Downloadable PDF notes attached to a course |
+| `Enrollment` | User ↔ Course link with status: ACTIVE / COMPLETED / EXPIRED / REFUNDED |
+| `LessonProgress` | Per-lesson completion + watched seconds per user |
+| `UserNote` | User's personal per-lesson notes (auto-saved) |
+| `Payment` | Razorpay payment record: orderId, paymentId, signature, status, amount in paise |
+| `Certificate` | Issued on course completion — has unique `certificateNo`, links to PDF |
+| `SiteContent` | Key-value CMS for editable homepage text (hero, stats, instructor, etc.) |
+| `Testimonial` | Student testimonials with rating, active toggle, sort order |
+| `FAQ` | FAQ items with active toggle and sort order |
+
+### Enums
+
+```
+Role:             STUDENT | ADMIN
+CourseLevel:      FOUNDATION | INTERMEDIATE | FINAL
+CourseStatus:     DRAFT | PUBLISHED | ARCHIVED
+EnrollmentStatus: ACTIVE | COMPLETED | EXPIRED | REFUNDED
+PaymentStatus:    CREATED | AUTHORIZED | CAPTURED | FAILED | REFUNDED
+```
+
+### Price convention
+
+All monetary amounts are stored in **paise** (1 INR = 100 paise). Convert for display: `Math.round(priceInPaise / 100)`.
+
+---
+
+## Authentication
+
+Powered by **Supabase Auth**.
+
+### Flows
+- **Email/Password** — standard signup and login
+- **Google OAuth** — one-click login via Google
+- **Forgot Password** — email reset link via Supabase
+- **Admin login** — separate `/admin/login` page; role checked against `Profile.role === 'ADMIN'`
+
+### How it works
+1. Supabase issues a session cookie (via `@supabase/ssr`)
+2. Server Components read the session with `createClient()` from `lib/supabase/server.ts`
+3. Client Components use `createBrowserClient()` from `lib/supabase/client.ts`
+4. A PostgreSQL trigger on `auth.users` automatically creates a `Profile` row on signup
+5. Admin access is guarded by `requireAdmin()` in `lib/admin-auth.ts` — checks Supabase session + `Profile.role`
+
+### Protected routes
+
+| Route | Guard |
+|---|---|
+| `/dashboard` | Server: `supabase.auth.getUser()` → redirect to `/login` |
+| `/dashboard/[courseId]` | Server: auth + enrollment check → redirect |
+| `/checkout/[courseId]` | Server: auth check → redirect; enrollment check → redirect to player |
+| `/admin/*` | Layout: admin auth guard + `Profile.role === ADMIN` |
+| `POST /api/payments/*` | API: Supabase session |
+| `GET/POST /api/admin/*` | API: `requireAdmin()` — 401/403 on failure |
+
+---
+
+## Payment Flow (Razorpay)
+
+```
+1. User clicks "Pay Now" on /checkout/[courseId]
+2. POST /api/payments/create-order
+   └── Creates Razorpay order (server-side with secret key)
+   └── Saves Payment record (status: CREATED)
+3. Razorpay checkout modal opens in browser
+4. User completes payment
+5. POST /api/payments/verify
+   └── Verifies HMAC signature
+   └── Updates Payment → CAPTURED
+   └── Creates/updates Enrollment → ACTIVE
+6. Redirect to /payment-success?course=...&title=...
+```
+
+All amounts in paise. Razorpay keys come from env: `RAZORPAY_KEY_ID` (secret) and `NEXT_PUBLIC_RAZORPAY_KEY_ID` (public, used in browser).
+
+---
+
+## Certificate Generation
+
+Certificates are generated as PDF using **@react-pdf/renderer**.
+
+- Triggered automatically when a student marks the last lesson complete (`POST /api/progress`)
+- `Certificate` row created in DB with a unique `certificateNo` (format: `NSA-YYYY-XXXXXX`)
+- PDF rendered server-side and streamed at `GET /api/certificates/[id]/download`
+- Students can verify any certificate at `/verify/[certificateNo]`
+- Design: gold border, forest-green header, ornamental divider, NSA seal
+
+---
+
+## Design System
+
+All tokens are defined in `app/globals.css` under `@theme`:
 
 | Token | Value | Usage |
 |---|---|---|
-| `--color-navy` | `#1A2744` | Primary headings, buttons, navbar bg |
+| `--color-navy` | `#1A2744` | Primary headings, dark backgrounds |
 | `--color-blue` | `#2563EB` | CTAs, links, active states |
 | `--color-teal` | `#0D9488` | Checkmarks, success, accent |
-| `--color-gold` | `#D4A843` | CTA banners, discount badges |
-| `--color-offwhite` | `#F7F8FA` | Page backgrounds, section alternation |
+| `--color-gold` | `#D4A843` | CTA banners, certificates |
+| `--color-offwhite` | `#F7F8FA` | Page backgrounds |
 | `--color-bodytext` | `#334155` | Paragraph text |
-| `--color-muted` | `#94A3B8` | Secondary labels, placeholders |
+| `--color-muted` | `#94A3B8` | Secondary labels |
 
 ### Fonts
-- **`--font-sans`** → Inter — body text
-- **`--font-heading`** → Plus Jakarta Sans — section headings, UI labels
-- **`--font-display`** → Playfair Display — large hero headings, instructor name
+- **Inter** — body text (`font-sans`)
+- **Plus Jakarta Sans** — UI headings (`font-heading`)
+- **Playfair Display** — large display headings (`font-display`)
 
-### Utility Classes (globals.css)
-| Class | Purpose |
-|---|---|
-| `.hero-grid-pattern` | Subtle dot-grid overlay for dark sections |
-| `.gradient-text` | Blue-to-teal gradient for headline spans |
-| `.card-hover` | `translateY(-4px)` lift on hover |
-| `.progress-bar` / `.progress-fill` | Course progress bar styling |
-| `.navbar-sticky` | Backdrop blur for sticky nav |
-| `.video-container` | 16:9 ratio iframe container |
+### Button variants (`components/ui/button.tsx`)
 
-### Button Variants (`components/ui/button.tsx`)
+All buttons support `loading` and `loadingText` props that show an inline spinner and disable the button during async actions.
+
 | Variant | Appearance |
 |---|---|
 | `default` | Blue fill, white text |
-| `outline` | Blue border, transparent fill → blue fill on hover |
+| `outline` | Blue border, transparent → blue on hover |
 | `ghost` | Transparent, gray hover |
 | `navy` | Navy fill, white text |
 | `gold` | Gold fill, navy text |
@@ -128,344 +292,457 @@ All design tokens are defined in `app/globals.css` under `@theme`:
 
 ---
 
-## 📄 Pages
+## Environment Variables
 
-### `/` — Homepage
+Create `portal/.env.local`:
 
-**File:** `app/page.tsx`
+```env
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
+SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
 
-Assembled from 7 section components rendered top-to-bottom:
+# Database (Supabase pooler — Transaction mode, port 6543)
+DATABASE_URL=postgresql://<user>:<password>@aws-0-<region>.pooler.supabase.com:6543/<db>
 
-| Order | Section | Component | Description |
-|---|---|---|---|
-| 1 | Hero | `HeroSection` | Full-viewport dark hero with instructor photo, course headline, benefits list, 100% money-back badge, and embedded YouTube preview |
-| 2 | Stats | `StatsBar` | White bar showing 4 quick stats: 2,000+ students, 4.9/5 rating, 35 hrs content, 100% money-back |
-| 3 | Instructor | `InstructorProfile` | CA Nikesh Shah's profile photo, bio, quote, credentials (ICAI, Symbiosis College Pune), teaching philosophy (3-card grid) |
-| 4 | Course | `FeaturedCourse` | "Now Launching" featured CA Final SFM course card — highlights, pricing, money-back guarantee, free preview embed, "Who is this for" section |
-| 5 | Why Us | `WhyUs` | 6-feature grid (logic-first, money-back, DRM-protected, zero prior knowledge, UPI payments, lifetime access) + prominent green guarantee banner |
-| 6 | Reviews | `Testimonials` | 6 student testimonials (Symbiosis College Pune + others), 4.9 aggregate rating bar, highlight tags per review |
-| 7 | CTA | `CTABanner` | Gold-gradient CTA with price, enrollment button, and trust signals row |
+# Direct connection (for Prisma CLI migrations, port 5432)
+DIRECT_URL=postgresql://<user>:<password>@aws-0-<region>.pooler.supabase.com:5432/<db>
 
----
-
-### `/courses` — All Courses
-
-**File:** `app/courses/page.tsx`
-
-- Dark navy hero banner with course count
-- **Filter Tabs:** All / Foundation / Intermediate / Final
-- Responsive grid of `CourseCard` components
-- Filter updates instantly (client-side state)
-
----
-
-### `/courses/[slug]` — Course Detail
-
-**File:** `app/courses/[slug]/page.tsx`
-
-Two-column layout (desktop) / single column (mobile):
-
-**Left column:**
-- Course title, level badge, rating, enrollment count, duration, video count
-- Description + instructor name
-- "What You'll Learn" card — 6 bullet points
-- **Curriculum accordion** — sections collapse/expand, lessons show lock icon or "Free Preview" button
-- Instructor bio card
-
-**Right column (sticky, desktop only):**
-- Embedded YouTube free preview iframe
-- Price display with discount percentage
-- "Enroll Now" CTA button
-- Course includes list (lifetime access, HD videos, mobile, certificate)
-
-**Mobile:**
-- Sticky bottom bar with price + "Enroll Now" button
-
----
-
-### `/checkout/[courseId]` — Checkout & Payment
-
-**File:** `app/checkout/[courseId]/page.tsx`
-
-**Auth-gated:** Redirects to `/login` if not logged in. Redirects to `/dashboard` if already enrolled.
-
-Two-column layout:
-
-**Left — Payment Form:**
-Three payment method tabs:
-1. **UPI** — QR code + copy UPI ID (`caportal@ybl`) + optional UPI ID input field, accepted app badges (PhonePe, GPay, Paytm, BHIM, Amazon Pay)
-2. **Card** — Card number (formatted), cardholder name, expiry (MM/YY), CVV, SSL note
-3. **Net Banking** — Grid of 8 bank buttons (SBI, HDFC, ICICI, Axis, Kotak, PNB, BOB, Union Bank)
-
-"Pay Now" button triggers a 2.5s simulated payment → calls `enrollCourse()` → redirects to `/payment-success`.
-
-**Right — Order Summary (sticky):**
-- Course name, video count, duration, lifetime access, mobile access
-- Price breakdown: original → discount → GST (inclusive) → total
-- 30-day money-back guarantee badge
-
----
-
-### `/payment-success` — Confirmation
-
-**File:** `app/payment-success/page.tsx`
-
-- Animated checkmark (spring animation via Framer Motion)
-- Course name pill
-- What's unlocked list
-- Two CTAs: "Start Learning Now" → `/dashboard/[courseId]`, "Go to Dashboard" → `/dashboard`
-- Refund policy link
-
----
-
-### `/dashboard` — Student Dashboard
-
-**File:** `app/dashboard/page.tsx`
-
-**Auth-gated** via `AuthGuard` component.
-
-**Header section (navy bg):**
-- User avatar + welcome message
-- Logout button
-- 3 stat cards: Courses Enrolled, Lessons Completed, Overall Progress
-
-**Content:**
-- **My Courses** — enrolled course cards with color strip, level badge, progress bar (static 30%), "Continue Learning" button
-- **Explore More Courses** — unenrolled courses with pricing, "Enroll Now" button → checkout
-
----
-
-### `/login` — Student Login
-
-**File:** `app/login/page.tsx`
-
-- Demo credentials info box (`student@demo.com` / `demo123`)
-- Email + password form with show/hide toggle
-- Error messaging on invalid credentials
-- Redirect to `?redirect=` param after login (or `/dashboard`)
-
----
-
-### `/register` — Student Registration
-
-**File:** `app/register/page.tsx`
-
-- Name, email, phone, password fields
-- **Mock registration:** any input → logs in as demo user → redirects to dashboard
-- Benefits list (free previews, progress tracking, course unlocking)
-
----
-
-### `/privacy`, `/terms`, `/refund` — Legal Pages
-
-Static content pages for Privacy Policy, Terms of Service, and Refund Policy.
-
----
-
-## 🔐 Authentication System
-
-**File:** `lib/auth.tsx`
-
-Pure client-side auth using React Context + `localStorage`. **No backend.**
-
-### How It Works
-
-1. **`AuthProvider`** wraps the entire app in `app/layout.tsx`
-2. On mount, reads `ca_portal_user` from `localStorage` to restore session (hydration)
-3. `isLoading: true` during hydration — prevents redirect flicker
-4. Login checks against hardcoded demo credentials
-5. On login, user object `{ name, email, enrolled: [] }` is stored to `localStorage`
-6. `enrollCourse(courseId)` appends to `enrolled[]` and persists to `localStorage`
-7. Logout clears `localStorage` and resets state
-
-### User Object Structure
-```ts
-interface User {
-  name: string;
-  email: string;
-  enrolled: string[];  // courseIds the user has paid for
-}
+# Razorpay
+RAZORPAY_KEY_ID=rzp_test_...
+RAZORPAY_KEY_SECRET=...
+NEXT_PUBLIC_RAZORPAY_KEY_ID=rzp_test_...
 ```
 
-### Demo Credentials
-```
-Email:    student@demo.com
-Password: demo123
-```
+### Where to find these values
 
-### `AuthGuard` Component
-`components/auth/AuthGuard.tsx` — wraps protected pages. Shows spinner during hydration, redirects to `/login?redirect=[current-path]` if not authenticated.
-
----
-
-## 📚 Course Data
-
-**File:** `lib/courses.ts`
-
-All course data is statically defined in this file. No database.
-
-### Course Type
-```ts
-interface Course {
-  id: string;
-  slug: string;
-  title: string;
-  description: string;
-  level: "Foundation" | "Intermediate" | "Final";
-  price: number;
-  originalPrice: number;
-  duration: string;
-  videoCount: number;
-  instructor: string;
-  rating: number;
-  enrollments: number;
-  thumbnail: null;
-  freePreviewUrl: string;     // YouTube embed URL for course card/detail
-  color: string;              // Hex color for course card gradient
-  curriculum: CurriculumSection[];
-}
-
-interface CurriculumSection {
-  title: string;
-  lessons: Lesson[];
-}
-
-interface Lesson {
-  title: string;
-  isFreePreview?: boolean;
-  videoId: string;            // YouTube video ID
-}
-```
-
-### Current Courses
-
-| ID | Title | Level | Price | Duration | Videos |
-|---|---|---|---|---|---|
-| `ca-foundation-accounts` | CA Foundation — Accounts & Auditing | Foundation | ₹1,499 | 18 hrs | 24 |
-| `ca-intermediate-financial` | CA Intermediate — Financial Management | Intermediate | ₹2,999 | 28 hrs | 38 |
-| `ca-final-strategic` | CA Final — Strategic Financial Management | Final | ₹3,999 | 35 hrs | 45 |
-
-### `VIDEO_IDs` Map
-All YouTube video IDs are centralized in `VIDEO_IDs` at the top of `lib/courses.ts`. Organized by level and lesson, they're referenced by both the curriculum and all homepage/course preview embeds.
+| Variable | Location |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase Dashboard → Project Settings → API → Project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase Dashboard → Project Settings → API → `anon public` key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase Dashboard → Project Settings → API → `service_role secret` key |
+| `DATABASE_URL` | Supabase Dashboard → Project Settings → Database → Connection String → Transaction pooler (port 6543) |
+| `DIRECT_URL` | Supabase Dashboard → Project Settings → Database → Connection String → Session pooler (port 5432) |
+| `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` | Razorpay Dashboard → Settings → API Keys |
 
 ---
 
-## 🧩 Key Components
+## Prisma Setup (v7)
 
-### `Navbar` (`components/layout/Navbar.tsx`)
-- Fixed top, `z-50`
-- **Transparent** on homepage hero, **white/blur** after scroll or on inner pages
-- Desktop: logo + nav links + auth buttons
-- Mobile: hamburger → right-drawer with full nav
-- Shows user's first name + logout when logged in
+Prisma 7 no longer supports `url` in `schema.prisma`. Connection is configured in two places:
 
-### `Footer` (`components/layout/Footer.tsx`)
-- Navy background
-- Brand column + 3 link groups (Platform, Company, Legal)
-- Social icon buttons (YouTube, Twitter/X, Instagram, Email)
+| File | Used for | Connection |
+|---|---|---|
+| `lib/prisma.ts` | Runtime (app server) | `DATABASE_URL` via `pg.Pool` → `PrismaPg` adapter (Transaction pooler, port 6543) |
+| `prisma.config.ts` | Prisma CLI (`db push`, `migrate`, `studio`) | `DIRECT_URL` (Session pooler, port 5432) |
 
-### `CourseCard` (`components/courses/CourseCard.tsx`)
-- Gradient thumbnail (level-specific)
-- Level `Badge`, star rating, title, instructor name
-- Duration, video count, enrollment count
-- Discounted price with strikethrough
-- "Enroll Now" → `/courses/[slug]`
-- Free Preview + discount % badges
+The `lib/prisma.ts` singleton pattern prevents connection pool exhaustion during Next.js hot-reload in development.
 
-### `InstructorProfile` (`components/home/InstructorProfile.tsx`)
-- Instructor photo with floating credential badge and rating badge
-- Two-column: photo left, bio right
-- Credentials checklist, large quote block, award pills
-- Teaching philosophy 3-card grid (Logic-First, Zero Prior Knowledge, Exam-Confident)
-
-### `Testimonials` (`components/home/Testimonials.tsx`)
-- 4.9/5 aggregate rating bar
-- 6 cards in 3-column grid (dark navy bg)
-- Each card: highlight tag, quote, 5 stars, author with colored avatar
-
----
-
-## 🏃 Running Locally
+### Database commands
 
 ```bash
-# Install dependencies
+# Push schema changes to DB (no migration files)
+npm run db:push
+
+# Run seed script
+npm run db:seed
+
+# Seed test/dummy data (idempotent — safe to re-run)
+npm run db:seed:test
+
+# Open Prisma Studio (visual DB browser)
+npm run db:studio
+```
+
+---
+
+## Running Locally
+
+```bash
+# 1. Install dependencies
 npm install
 
-# Start development server
+# 2. Set up environment variables
+cp .env.example .env.local
+# Fill in all values as described above
+
+# 3. Push schema to your Supabase database
+npm run db:push
+
+# 4. (Optional) Seed with sample data
+npm run db:seed
+
+# 5. Start development server
 npm run dev
+```
 
-# Build for production
+Dev server runs at `http://localhost:3000`  
+Admin panel at `http://localhost:3000/admin`
+
+### Default Access Credentials
+
+> After running `npm run db:seed:test` the following accounts are available:
+
+**Student Portal** (`http://localhost:3000`)
+
+| Field    | Value                           |
+|----------|---------------------------------|
+| URL      | `http://localhost:3000/login`   |
+| Email    | `testplayer@nsacademy.dev`      |
+| Password | `TestPass@1234`                 |
+
+**Admin Panel** (`http://localhost:3000/admin`)
+
+| Field    | Value                              |
+|----------|------------------------------------|
+| URL      | `http://localhost:3000/admin/login` |
+| Email    | `admin@nsacademy.dev`              |
+| Password | `AdminPass@1234`                   |
+
+```bash
+# Production build
 npm run build
-
-# Start production server
 npm run start
 ```
 
-Dev server runs at `http://localhost:3000`
+---
+
+## Claude Code Skills
+
+Project-specific automation commands available in Claude Code (type `/` to see them):
+
+| Command | What it does |
+|---------|-------------|
+| `/check` | Lint + type-check + unit tests → clear pass/fail report |
+| `/ship` | Full pre-deploy gate: everything above + production build |
+| `/scaffold <name>` | Generate a new admin API route + Zod schema + unit test |
+| `/seed` | Seed test data · `/seed prod` for production · `/seed reset` to wipe and reseed |
+| `/coverage` | Run tests with coverage, show which files need more tests |
+| `/review` | Review staged changes for quality, security, conventions, and missing tests |
 
 ---
 
-## ⚙️ Configuration
+## Development Workflow
 
-### `next.config.ts`
-Sets Content Security Policy headers allowing:
-- YouTube iframes from `www.youtube-nocookie.com` and `www.youtube.com`
-- Google Fonts loading
-- Standard self-hosted assets
+### Every commit — what happens automatically
 
-### `app/globals.css`
-Primary style file — all design tokens, custom utility classes, and base resets live here. Tailwind v4 uses `@import "tailwindcss"` and `@theme {}` for token injection.
+```
+git add .
+git commit -m "feat: add new feature"
+```
+
+1. **lint-staged** runs ESLint on every staged `.ts` / `.tsx` file — auto-fixes what it can, blocks the commit if errors remain
+2. **Vitest** runs all 296 unit + API tests (~3 seconds) — blocks the commit if any test fails
+3. **E2E tests are NOT run on commit** — they need a live DB + dev server (too slow for pre-commit)
+
+### Every push to GitHub — CI runs automatically
+
+`.github/workflows/ci.yml` triggers on every push to `main` or `develop`:
+
+| Step | What it does | Blocks merge? |
+|------|--------------|---------------|
+| Lint | `eslint` on all source files | Yes |
+| Type-check | `tsc --noEmit` — zero TypeScript errors | Yes |
+| Unit tests | All Vitest tests with coverage report | Yes |
+| E2E tests | Full Playwright suite (requires secrets) | Yes (if enabled) |
+
+### To enable E2E in CI
+
+1. Go to GitHub repo → Settings → Secrets → Actions
+2. Add all values from your `.env.local` as secrets
+3. Go to GitHub repo → Settings → Variables → Add variable `E2E_ENABLED = true`
 
 ---
 
-## 🗺️ URL Map
+## Testing
 
-| Route | Page | Auth Required |
+### Unit Tests (Vitest)
+
+```bash
+# Run all unit tests once
+npm run test
+
+# Run in watch mode
+npm run test:watch
+
+# Run with coverage report
+npm run test:coverage
+
+# Open interactive Vitest UI
+npm run test:ui
+```
+
+### E2E Tests (Playwright)
+
+Before running E2E tests, seed the test data first:
+
+```bash
+# 1. Seed test/dummy data (idempotent — safe to re-run)
+npm run db:seed:test
+
+# 2. Start the dev server (in a separate terminal)
+npm run dev
+
+# 3. Run E2E tests
+npm run test:e2e
+
+# Run with headed browser (visible)
+npm run test:e2e:headed
+
+# Open interactive Playwright UI
+npm run test:e2e:ui
+
+# View the last HTML report
+npm run test:e2e:report
+```
+
+### Run All Tests
+
+```bash
+npm run test:all
+```
+
+### Test Credentials
+
+| Role    | Email                     | Password       |
+|---------|---------------------------|----------------|
+| Admin   | admin@nsacademy.dev       | AdminPass@1234 |
+| Student | testplayer@nsacademy.dev  | TestPass@1234  |
+
+---
+
+## Admin Panel
+
+Protected at `/admin` — requires a user with `Profile.role = 'ADMIN'`.
+
+### Login Credentials
+
+| Field    | Value                            |
+|----------|----------------------------------|
+| URL      | `http://localhost:3000/admin/login` |
+| Email    | `admin@nsacademy.dev`            |
+| Password | `AdminPass@1234`                 |
+
+> Run `npm run db:seed:test` to create the admin user and all test/demo data before first login.
+
+To promote any user to admin, run in Supabase SQL editor:
+```sql
+UPDATE "Profile" SET role = 'ADMIN' WHERE email = 'your@email.com';
+```
+
+---
+
+### Navigation Overview
+
+| Section      | Route                   | Purpose                              |
+|--------------|-------------------------|--------------------------------------|
+| Dashboard    | `/admin`                | Stats overview + recent enrollments  |
+| Courses      | `/admin/courses`        | Manage course catalog                |
+| Students     | `/admin/students`       | View and search registered students  |
+| Payments     | `/admin/payments`       | Transaction history and revenue      |
+| Site Content | `/admin/content`        | Edit homepage CMS content            |
+| Testimonials | `/admin/testimonials`   | Manage student testimonials          |
+| FAQs         | `/admin/faqs`           | Manage FAQ section                   |
+| Settings     | `/admin/settings`       | Razorpay config reference + SQL tips |
+
+---
+
+### Admin Flows
+
+#### 1. Dashboard
+- Shows 4 KPI cards: Total Students, Courses, Enrollments, Revenue
+- Quick action links for common tasks
+- Table of the 8 most recent enrollments
+
+#### 2. Managing Courses
+
+**Create a course**
+1. Go to **Courses → New Course**
+2. Fill in all required fields:
+   - Title, Slug (auto-generated from title), Duration
+   - Short Description, Full Description
+   - Level: `Foundation` | `Intermediate` | `Final`
+   - Status: `Draft` (not visible) | `Published` | `Archived`
+   - Price and Original Price (entered in **₹ rupees**, stored in paise internally)
+   - **What You'll Learn** — add at least one learning outcome (required)
+   - Accent Color, Instructor, Thumbnail URL, Free Preview URL
+   - Optional: Meta Title, Meta Description for SEO
+3. Click **Create Course**
+
+**Edit a course**
+1. Go to **Courses**, click **Edit** on any row
+2. Update any fields, then click **Save Changes**
+3. To delete permanently, click **Delete Course** (red button, bottom-right)
+
+**Build curriculum (sections & lessons)**
+
+On the course edit page, the **Curriculum** section lets you:
+- **Add Section** — creates a new section, auto-focuses the title for renaming
+- **Rename Section** — click the pencil icon, edit inline, press Enter or click ✓
+- **Delete Section** — click the trash icon (cascades to all lessons in that section)
+- **Add Lesson** — expand a section, click "Add Lesson", fill title + video URL (required), duration, free preview flag
+- **Edit Lesson** — hover a lesson row, click the pencil icon to edit inline
+- **Delete Lesson** — hover a lesson row, click the trash icon
+
+#### 3. Students
+
+- Search by name or email using the search bar
+- Click a student name or **View →** to see their full profile:
+  - All enrollments with status (Active / Completed)
+  - Payment history with Razorpay order IDs
+  - Issued certificates
+
+#### 4. Payments
+
+- Shows up to 200 latest transactions
+- Summary cards: Total Revenue, Avg. Order Value, Captured count, Failed count
+- Status colors:
+  - **Captured** (green) — payment successful, enrollment activated
+  - **Created / Authorized** (amber/blue) — in-progress
+  - **Failed** (red) — payment failed, no enrollment
+  - **Refunded** (gray) — refunded
+
+#### 5. Site Content (CMS)
+
+Edits text on the public homepage. Groups:
+- **Hero** — headline, subheadline, badge text, CTA button labels
+- **Stats** — social proof numbers and labels
+- **Instructor** — name, title, bio, credentials
+- **CTA** — bottom call-to-action section text
+- **Footer** — company name, tagline, contact email/phone
+
+Click **Save All Changes** to persist and revalidate the homepage cache.
+
+#### 6. Testimonials
+
+- **Add** — fill name (required), college, role/achievement, star rating, quote (required)
+- **Show/Hide** — eye icon toggles `isActive` (hidden testimonials don't appear on the homepage)
+- **Delete** — trash icon with confirmation
+
+#### 7. FAQs
+
+- **Add** — fill question and answer (both required)
+- **Expand** — click the question text or chevron to see the answer
+- **Edit** — pencil icon opens inline edit for both question and answer
+- **Show/Hide** — eye icon toggles visibility
+- **Delete** — trash icon with confirmation
+
+#### 8. Settings
+
+Informational page showing:
+- How to configure Razorpay keys in `.env.local`
+- SQL snippet to grant ADMIN role to new users
+- Required Supabase trigger for auto-creating user profiles on signup
+
+---
+
+### Admin API Routes
+
+All routes require `ADMIN` role. All return `{ success: true, data: ... }` or `{ success: false, error: "..." }`.
+
+```
+GET  / POST              /api/admin/courses
+GET  / PATCH / DELETE    /api/admin/courses/[id]
+POST                     /api/admin/sections
+PATCH / DELETE           /api/admin/sections/[id]
+POST                     /api/admin/lessons
+PATCH / DELETE           /api/admin/lessons/[id]
+GET                      /api/admin/students
+GET                      /api/admin/students/[id]
+GET  / POST              /api/admin/enrollments
+PATCH / DELETE           /api/admin/enrollments/[id]
+GET  / POST              /api/admin/content
+GET  / POST              /api/admin/testimonials
+PATCH / DELETE           /api/admin/testimonials/[id]
+GET  / POST              /api/admin/faqs
+PATCH / DELETE           /api/admin/faqs/[id]
+GET                      /api/admin/stats
+POST                     /api/admin/upload
+```
+
+---
+
+### Authentication & Security
+
+- Login uses Supabase Auth (`signInWithPassword`)
+- Every API route calls `requireAdmin()` from `lib/admin-auth.ts` which:
+  1. Checks active Supabase session
+  2. Looks up `Profile.role` in Prisma — must be `"ADMIN"`
+  3. Returns `401` (unauthenticated) or `403` (not admin) on failure
+- The layout (`app/(admin)/layout.tsx`) double-checks admin status server-side before rendering the sidebar
+
+---
+
+## URL Map
+
+| Route | Page | Auth |
 |---|---|---|
-| `/` | Homepage | No |
-| `/courses` | All courses | No |
-| `/courses/:slug` | Course detail | No |
-| `/checkout/:courseId` | Payment | ✅ Yes |
-| `/dashboard` | Student dashboard | ✅ Yes |
-| `/dashboard/:courseId` | Course player (wip) | ✅ Yes |
-| `/payment-success` | Confirmation | No |
-| `/login` | Login | No |
-| `/register` | Registration | No |
-| `/privacy` | Privacy Policy | No |
-| `/terms` | Terms of Service | No |
-| `/refund` | Refund Policy | No |
-| `/blog` | Blog (placeholder) | No |
+| `/` | Homepage | Public |
+| `/courses` | All courses | Public |
+| `/courses/:slug` | Course detail | Public |
+| `/checkout/:courseId` | Payment | Student |
+| `/payment-success` | Confirmation | Public |
+| `/dashboard` | Student dashboard | Student |
+| `/dashboard/:courseId` | Course player | Student + enrolled |
+| `/verify/:certificateNo` | Certificate verification | Public |
+| `/login` | Login | Public |
+| `/register` | Register | Public |
+| `/forgot-password` | Password reset request | Public |
+| `/reset-password` | Set new password | Public |
+| `/admin` | Admin dashboard | Admin |
+| `/admin/*` | Admin sub-pages | Admin |
+| `/privacy` | Privacy Policy | Public |
+| `/terms` | Terms of Service | Public |
+| `/refund` | Refund Policy | Public |
 
 ---
 
-## 🔄 Data & State Flow
+## Data & Request Flow
 
+### Public page load (e.g. homepage)
 ```
-lib/courses.ts (static data)
-       │
-       ├──▶ /courses page (filter + display)
-       ├──▶ /courses/[slug] (detail page)
-       ├──▶ /checkout/[courseId] (price, title lookup)
-       ├──▶ /dashboard (enrolled vs unenrolled split)
-       └──▶ homepage FeaturedCourse (hardcoded to ca-final-strategic)
+Browser → Next.js Server
+  └── Server Component renders with Prisma data (ISR cached)
+  └── HTML streamed to browser (no client fetch needed)
+```
 
-lib/auth.tsx (AuthContext)
-       │
-       ├──▶ localStorage: ca_portal_user
-       ├──▶ Navbar (login state, user name)
-       ├──▶ AuthGuard (route protection)
-       ├──▶ /checkout (enrollCourse() on pay)
-       └──▶ /dashboard (enrolled[] list)
+### Student dashboard load
+```
+Browser → Next.js Server
+  └── supabase.auth.getUser() — verify session
+  └── prisma.enrollment.findMany() + prisma.certificate.findMany() — parallel
+  └── prisma.lessonProgress.groupBy() — single batch query for all lesson progress
+  └── Full HTML with data rendered, no client-side waterfall
+```
+
+### Payment flow
+```
+Browser (CheckoutClient)
+  └── POST /api/payments/create-order → Razorpay API → returns orderId
+  └── Razorpay modal opens
+  └── User pays
+  └── POST /api/payments/verify → HMAC check → Enrollment created → 200
+  └── Browser redirects to /payment-success
+```
+
+### Progress + certificate
+```
+Browser (CoursePlayerClient)
+  └── POST /api/progress { lessonId, isCompleted: true }
+      └── Upsert LessonProgress
+      └── Count completed lessons for course
+      └── If all complete:
+          └── Update Enrollment → COMPLETED
+          └── Create Certificate (certificateNo: NSA-YYYY-XXXXXX)
+          └── Return { courseCompleted: true, certificateId }
+  └── Browser shows completion modal with download link
 ```
 
 ---
 
-## 📌 Known Limitations (Current State)
+## Google OAuth Setup
 
-- **No real backend** — all auth and enrollment is localStorage-only; clears on browser data wipe
-- **No real payment gateway** — payment is simulated (2.5s delay → auto-enroll)
-- **Static course content** — courses and curriculum are hardcoded in `lib/courses.ts`
-- **Single demo user** — only one student account (`student@demo.com`) works
-- **Course player** — `/dashboard/[courseId]` route exists but is not fully built yet
-- **Blog** — placeholder route, no content yet
-- **No admin panel** — content and courses can only be updated by editing source files
+1. Google Cloud Console → Create OAuth 2.0 Client (Web Application)
+2. Authorized redirect URI: `https://<project-ref>.supabase.co/auth/v1/callback`
+3. Supabase Dashboard → Authentication → Providers → Google → enable, add Client ID + Secret
+4. The login page calls `supabase.auth.signInWithOAuth({ provider: 'google' })`

@@ -92,7 +92,7 @@ export default function FeaturedCourse() {
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6, delay: 0.1 }}
         >
-          <div className="grid grid-cols-1 lg:grid-cols-2">
+          <div className="grid grid-cols-1 lg:grid-cols-2 lg:items-start">
             {/* Left — course info */}
             <div className="p-8 md:p-12 flex flex-col justify-between">
               {/* Course meta */}
@@ -148,7 +148,7 @@ export default function FeaturedCourse() {
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <Link href="/courses/ca-final-strategic">
+                  <Link href="/checkout/course_sfm_001">
                     <Button
                       size="lg"
                       className="gap-2 w-full sm:w-auto"
@@ -158,7 +158,11 @@ export default function FeaturedCourse() {
                       <ArrowRight className="w-5 h-5" />
                     </Button>
                   </Link>
-                  <Link href="/courses/ca-final-strategic">
+                  <a
+                    href="https://youtu.be/psQaSIotMv4"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     <Button
                       size="lg"
                       variant="outline"
@@ -168,7 +172,7 @@ export default function FeaturedCourse() {
                       <PlayCircle className="w-5 h-5" />
                       Watch Free Lecture
                     </Button>
-                  </Link>
+                  </a>
                 </div>
 
                 {/* Money-back guarantee */}

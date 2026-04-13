@@ -2,238 +2,327 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { GraduationCap, Menu, X, BookOpen, LogOut, User } from "lucide-react";
+import { useRouter, usePathname } from "next/navigation";
+import { Menu, X, BookOpen, LogOut, User, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/lib/auth";
-import { cn } from "@/lib/utils";
-
-const navLinks = [
-  { label: "Courses", href: "/courses" },
-  { label: "About", href: "/#about" },
-  { label: "Pricing", href: "/#pricing" },
-];
+import { createClient } from "@/lib/supabase/client";
+import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 export default function Navbar() {
+  const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const { user, isLoggedIn, logout } = useAuth();
-  const pathname = usePathname();
+  const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [activeSection, setActiveSection] = useState<string>("");
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 10);
-    window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
+    const supabase = createClient();
+
+    supabase.auth.getUser().then(({ data }) => setUser(data.user));
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const handleLogout = () => {
-    logout();
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (pathname !== "/") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setActiveSection("");
+      return;
+    }
+
+    const sectionIds = ["about", "testimonials", "faq"];
+
+    const computeActive = () => {
+      // Offset: a section becomes active when its top is within 30% of viewport height from the top
+      const threshold = window.scrollY + window.innerHeight * 0.3;
+      let current = "";
+      for (const id of sectionIds) {
+        const el = document.getElementById(id);
+        if (el && el.offsetTop <= threshold) {
+          current = id;
+        }
+      }
+      setActiveSection(current);
+    };
+
+    computeActive();
+    window.addEventListener("scroll", computeActive, { passive: true });
+    return () => window.removeEventListener("scroll", computeActive);
+  }, [pathname]);
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    setUser(null);
     router.push("/");
+    router.refresh();
   };
 
-  const isHomePage = pathname === "/";
+  const displayName =
+    user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Student";
+  const initials = displayName
+    .split(" ")
+    .map((n: string) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  const navLinks = [
+    { href: "/", label: "Home" },
+    { href: "/#about", label: "About" },
+    { href: "/#testimonials", label: "Reviews" },
+    { href: "/#faq", label: "FAQ" },
+  ];
+
+  const isActive = (href: string) => {
+    if (href === "/") return pathname === "/" && activeSection === "";
+    if (href.startsWith("/#")) {
+      const sectionId = href.slice(2);
+      return pathname === "/" && activeSection === sectionId;
+    }
+    return pathname.startsWith(href);
+  };
+
+  // Only use transparent/dark style on homepage before scrolling
+  const isHeroMode = pathname === "/" && !scrolled;
 
   return (
-    <>
-      <nav
-        className={cn(
-          "fixed top-0 left-0 right-0 z-50 transition-all duration-300 navbar-sticky",
-          scrolled || !isHomePage
-            ? "bg-white/95 shadow-sm border-b border-gray-100"
-            : "bg-transparent"
-        )}
-      >
-        <div className="max-w-7xl mx-auto px-4 md:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <Link href="/" className="flex items-center gap-2.5 group">
-              <div className="w-9 h-9 bg-blue rounded-lg flex items-center justify-center shadow-md group-hover:scale-105 transition-transform">
-                <GraduationCap className="w-5 h-5 text-white" />
-              </div>
+    <nav
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 navbar-sticky ${
+        isHeroMode
+          ? "bg-transparent"
+          : "bg-white/95 shadow-sm border-b border-gray-100"
+      }`}
+    >
+      <div className="max-w-7xl mx-auto px-4 md:px-8">
+        <div className="flex items-center justify-between h-16">
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-2.5 group">
+            <div
+              className="w-12 h-12 rounded-xl overflow-hidden shadow-sm group-hover:scale-105 transition-transform flex-shrink-0"
+              style={{ background: "#16a34a" }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/ns-icon.png"
+                alt="NS Academy Icon"
+                className="w-full h-full object-cover scale-110"
+              />
+            </div>
+            <div className="flex flex-col leading-none">
               <span
-                className={cn(
-                  "font-bold text-lg transition-colors",
-                  scrolled || !isHomePage ? "text-navy" : "text-white"
-                )}
+                className={`font-bold text-base ${
+                  isHeroMode ? "text-white" : "text-navy"
+                }`}
               >
-                CA Portal
+                NS Academy
               </span>
-            </Link>
-
-            {/* Desktop Nav */}
-            <div className="hidden md:flex items-center gap-8">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={cn(
-                    "text-sm font-medium transition-colors hover:text-blue",
-                    scrolled || !isHomePage
-                      ? "text-bodytext"
-                      : "text-white/90"
-                  )}
-                >
-                  {link.label}
-                </Link>
-              ))}
+              <span
+                className={`text-[10px] font-medium ${
+                  isHeroMode ? "text-white/60" : "text-muted"
+                }`}
+              >
+                CA Nikesh Shah
+              </span>
             </div>
+          </Link>
 
-            {/* Auth Buttons */}
-            <div className="hidden md:flex items-center gap-3">
-              {isLoggedIn ? (
-                <>
-                  <Link href="/dashboard">
-                    <div className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
-                      <div className="w-8 h-8 bg-blue rounded-full flex items-center justify-center">
-                        <User className="w-4 h-4 text-white" />
-                      </div>
-                      <span
-                        className={cn(
-                          "text-sm font-medium",
-                          scrolled || !isHomePage ? "text-bodytext" : "text-white"
-                        )}
-                      >
-                        {user?.name?.split(" ")[0]}
-                      </span>
-                    </div>
-                  </Link>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleLogout}
-                    className="text-muted hover:text-red-500"
-                  >
-                    <LogOut className="w-4 h-4" />
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Link href="/login">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={cn(
-                        scrolled || !isHomePage
-                          ? "text-bodytext"
-                          : "text-white hover:bg-white/10"
-                      )}
-                    >
-                      Login
-                    </Button>
-                  </Link>
-                  <Link href="/register">
-                    <Button size="sm" variant="default">
-                      Start Free
-                    </Button>
-                  </Link>
-                </>
-              )}
-            </div>
-
-            {/* Mobile Hamburger */}
-            <button
-              className={cn(
-                "md:hidden p-2 rounded-lg transition-colors",
-                scrolled || !isHomePage
-                  ? "text-navy hover:bg-gray-100"
-                  : "text-white hover:bg-white/10"
-              )}
-              onClick={() => setMobileOpen(!mobileOpen)}
-              aria-label="Toggle menu"
-            >
-              {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
-          </div>
-        </div>
-      </nav>
-
-      {/* Mobile Menu Overlay */}
-      {mobileOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/50"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
-
-      {/* Mobile Drawer */}
-      <div
-        className={cn(
-          "fixed top-0 right-0 z-50 h-full w-72 bg-white shadow-2xl transform transition-transform duration-300",
-          mobileOpen ? "translate-x-0" : "translate-x-full"
-        )}
-      >
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-8">
-            <Link
-              href="/"
-              className="flex items-center gap-2"
-              onClick={() => setMobileOpen(false)}
-            >
-              <div className="w-9 h-9 bg-blue rounded-lg flex items-center justify-center">
-                <GraduationCap className="w-5 h-5 text-white" />
-              </div>
-              <span className="font-bold text-navy text-lg">CA Portal</span>
-            </Link>
-            <button
-              onClick={() => setMobileOpen(false)}
-              className="p-2 rounded-lg hover:bg-gray-100"
-            >
-              <X className="w-5 h-5 text-gray-500" />
-            </button>
-          </div>
-
-          <div className="flex flex-col gap-2">
+          {/* Desktop Nav Links + Courses pill */}
+          <div className="hidden md:flex items-center gap-6">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
-                href={link.href}
-                onClick={() => setMobileOpen(false)}
-                className="flex items-center gap-3 px-4 py-3 rounded-lg text-bodytext hover:bg-offwhite hover:text-blue font-medium transition-colors"
+                href={
+                  link.href.startsWith("/#")
+                    ? { pathname: "/", hash: link.href.slice(2) }
+                    : link.href
+                }
+                className={`text-sm font-medium transition-colors relative pb-0.5 ${
+                  isActive(link.href)
+                    ? isHeroMode
+                      ? "text-white font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-white after:rounded-full"
+                      : "text-blue font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-blue after:rounded-full"
+                    : isHeroMode
+                    ? "text-white/80 hover:text-white"
+                    : "text-bodytext hover:text-blue"
+                }`}
               >
-                <BookOpen className="w-4 h-4" />
                 {link.label}
               </Link>
             ))}
+
+            {/* Courses — highlighted pill to draw attention */}
+            <Link
+              href="/courses"
+              className={`flex items-center gap-1.5 text-sm font-semibold px-3.5 py-1.5 rounded-full border transition-all duration-200 ${
+                pathname.startsWith("/courses")
+                  ? "bg-blue text-white border-blue shadow-sm"
+                  : isHeroMode
+                  ? "bg-white/15 text-white border-white/30 hover:bg-white/25 hover:border-white/60"
+                  : "bg-blue/10 text-blue border-blue/30 hover:bg-blue hover:text-white hover:border-blue"
+              }`}
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              Courses
+            </Link>
           </div>
 
-          <div className="mt-8 pt-8 border-t border-gray-100 flex flex-col gap-3">
-            {isLoggedIn ? (
-              <>
-                <Link href="/dashboard" onClick={() => setMobileOpen(false)}>
-                  <Button variant="default" className="w-full">
-                    My Dashboard
-                  </Button>
-                </Link>
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => {
-                    handleLogout();
-                    setMobileOpen(false);
-                  }}
+          {/* Desktop Auth */}
+          <div className="hidden md:flex items-center gap-3">
+            {user ? (
+              <div className="flex items-center gap-3">
+                <Link
+                  href="/dashboard"
+                  className="flex items-center gap-1.5 text-sm font-medium text-blue hover:text-primary-dark transition-colors"
                 >
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Logout
-                </Button>
-              </>
+                  <LayoutDashboard className="w-4 h-4" />
+                  Dashboard
+                </Link>
+                <div className="w-8 h-8 bg-blue rounded-full flex items-center justify-center text-white text-xs font-bold">
+                  {initials}
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="text-muted hover:text-red-500 transition-colors"
+                  title="Sign out"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
             ) : (
               <>
-                <Link href="/login" onClick={() => setMobileOpen(false)}>
-                  <Button variant="outline" className="w-full">
+                <Link href="/login">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={
+                      isHeroMode ? "text-white hover:bg-white/10" : "text-bodytext"
+                    }
+                  >
                     Login
                   </Button>
                 </Link>
-                <Link href="/register" onClick={() => setMobileOpen(false)}>
-                  <Button variant="default" className="w-full">
-                    Start Free
+                <Link href="/checkout/course_sfm_001">
+                  <Button variant="default" size="sm" className="gap-1.5">
+                    Enroll Now
                   </Button>
                 </Link>
               </>
             )}
           </div>
+
+          {/* Mobile Hamburger */}
+          <button
+            className={`md:hidden transition-colors ${
+              isHeroMode ? "text-white" : "text-navy"
+            }`}
+            onClick={() => setIsOpen(!isOpen)}
+            aria-label="Toggle menu"
+          >
+            {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
         </div>
       </div>
-    </>
+
+      {/* Mobile Drawer */}
+      {isOpen && (
+        <div className="md:hidden bg-white border-t border-gray-100 shadow-xl">
+          <div className="px-4 py-4 space-y-1">
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={
+                  link.href.startsWith("/#")
+                    ? { pathname: "/", hash: link.href.slice(2) }
+                    : link.href
+                }
+                className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                  isActive(link.href)
+                    ? "bg-blue/10 text-blue font-semibold"
+                    : "text-bodytext hover:bg-offwhite hover:text-blue"
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
+
+            {/* Courses — prominent in mobile */}
+            <Link
+              href="/courses"
+              className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+                pathname.startsWith("/courses")
+                  ? "bg-blue text-white"
+                  : "bg-blue/10 text-blue hover:bg-blue hover:text-white"
+              }`}
+            >
+              <BookOpen className="w-4 h-4" />
+              Courses
+            </Link>
+
+            <div className="pt-3 border-t border-gray-100 space-y-2">
+              {user ? (
+                <>
+                  <div className="flex items-center gap-3 px-3 py-2.5">
+                    <div className="w-8 h-8 bg-blue rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                      {initials}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-navy">
+                        {displayName}
+                      </p>
+                      <p className="text-xs text-muted">{user.email}</p>
+                    </div>
+                  </div>
+                  <Link href="/dashboard" className="block">
+                    <button className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-sm font-medium text-bodytext hover:bg-offwhite transition-colors">
+                      <User className="w-4 h-4" />
+                      My Dashboard
+                    </button>
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Sign Out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link href="/login" className="block">
+                    <Button variant="outline" className="w-full">
+                      Login
+                    </Button>
+                  </Link>
+                  <Link href="/checkout/course_sfm_001" className="block">
+                    <Button variant="default" className="w-full gap-2">
+                      Enroll Now
+                    </Button>
+                  </Link>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </nav>
   );
 }

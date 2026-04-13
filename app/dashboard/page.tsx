@@ -1,255 +1,327 @@
-"use client";
-
-import React from "react";
+import { redirect } from "next/navigation";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
-  BookOpen,
-  PlayCircle,
-  Trophy,
-  ChevronRight,
-  TrendingUp,
-  Clock,
-  LogOut,
-  User,
+  BookOpen, PlayCircle, Trophy, ChevronRight, TrendingUp,
+  Clock, Award, Download, Sparkles, User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import AuthGuard from "@/components/auth/AuthGuard";
-import { useAuth } from "@/lib/auth";
-import { courses } from "@/lib/courses";
+import { createClient } from "@/lib/supabase/server";
+import { prisma } from "@/lib/prisma";
+import { LogoutButton } from "./DashboardClient";
 
+// ── Types ──────────────────────────────────────────────────────────────
 type LevelVariant = "foundation" | "intermediate" | "final";
 const levelVariantMap: Record<string, LevelVariant> = {
-  Foundation: "foundation",
-  Intermediate: "intermediate",
-  Final: "final",
+  FOUNDATION: "foundation", INTERMEDIATE: "intermediate", FINAL: "final",
+};
+const levelLabel: Record<string, string> = {
+  FOUNDATION: "Foundation", INTERMEDIATE: "Intermediate", FINAL: "Final",
 };
 
-function DashboardInner() {
-  const { user, logout } = useAuth();
-  const router = useRouter();
+const statCards = [
+  { label: "Enrolled",     icon: BookOpen,   iconColor: "text-blue-400"    },
+  { label: "Completed",    icon: PlayCircle, iconColor: "text-emerald-400" },
+  { label: "In Progress",  icon: TrendingUp, iconColor: "text-violet-400"  },
+  { label: "Certificates", icon: Award,      iconColor: "text-amber-400"   },
+];
 
-  const enrolledCourses = courses.filter((c) => user?.enrolled.includes(c.id));
-  const exploreMore = courses.filter((c) => !user?.enrolled.includes(c.id));
+// ── Server-side data fetching ───────────────────────────────────────────
+async function getDashboardData(userId: string) {
+  // Single batched query: enrollments + all lesson IDs + certificates
+  const [enrollments, certificates] = await Promise.all([
+    prisma.enrollment.findMany({
+      where: { userId, status: { in: ["ACTIVE", "COMPLETED"] } },
+      include: {
+        course: {
+          include: {
+            sections: { include: { lessons: { select: { id: true } } } },
+          },
+        },
+      },
+      orderBy: { enrolledAt: "desc" },
+    }),
+    prisma.certificate.findMany({
+      where: { userId },
+      include: { course: { select: { title: true, slug: true } } },
+      orderBy: { issuedAt: "desc" },
+    }),
+  ]);
 
-  const handleLogout = () => {
-    logout();
-    router.push("/");
-  };
+  // Collect ALL lesson IDs across all enrollments in one go
+  const allLessonIds = enrollments.flatMap((e) =>
+    e.course.sections.flatMap((s) => s.lessons.map((l) => l.id))
+  );
+
+  // ONE query for all progress (replaces N separate queries)
+  const completedProgress = await prisma.lessonProgress.groupBy({
+    by: ["lessonId"],
+    where: { userId, lessonId: { in: allLessonIds }, isCompleted: true },
+    _count: { lessonId: true },
+  });
+
+  const completedSet = new Set(completedProgress.map((p) => p.lessonId));
+  const certByCourseId = new Map(certificates.map((c) => [c.courseId, c.id]));
+
+  const enrichedEnrollments = enrollments.map((enrollment) => {
+    const lessonIds = enrollment.course.sections.flatMap((s) =>
+      s.lessons.map((l) => l.id)
+    );
+    const completedCount = lessonIds.filter((id) => completedSet.has(id)).length;
+    const totalLessons = lessonIds.length;
+    const percent = totalLessons > 0
+      ? Math.round((completedCount / totalLessons) * 100)
+      : 0;
+
+    return {
+      id: enrollment.id,
+      status: enrollment.status,
+      certificateId: certByCourseId.get(enrollment.course.id) ?? null,
+      course: {
+        id:           enrollment.course.id,
+        slug:         enrollment.course.slug,
+        title:        enrollment.course.title,
+        level:        enrollment.course.level,
+        duration:     enrollment.course.duration,
+        color:        enrollment.course.color,
+      },
+      progress: { completed: completedCount, total: totalLessons, percent },
+    };
+  });
+
+  return { enrollments: enrichedEnrollments, certificates };
+}
+
+// ── Page (Server Component) ─────────────────────────────────────────────
+export default async function DashboardPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) redirect("/login?redirect=/dashboard");
+
+  const displayName =
+    user.user_metadata?.full_name || user.email?.split("@")[0] || "Student";
+  const initials = displayName
+    .split(" ")
+    .map((n: string) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  const { enrollments, certificates } = await getDashboardData(user.id);
+
+  const totalCompleted  = enrollments.reduce((s, e) => s + e.progress.completed, 0);
+  const inProgressCount = enrollments.filter((e) => e.status === "ACTIVE").length;
+  const statValues      = [enrollments.length, totalCompleted, inProgressCount, certificates.length];
 
   return (
-    <div className="min-h-screen bg-offwhite pt-16">
-      {/* Header */}
-      <div className="bg-navy relative overflow-hidden">
-        <div className="absolute inset-0 hero-grid-pattern opacity-20" />
-        <div className="absolute top-0 right-0 w-64 h-64 bg-blue/10 rounded-full blur-3xl" />
+    <div className="min-h-screen bg-slate-50 pt-16">
+
+      {/* ── Hero header ── */}
+      <div className="relative bg-gradient-to-br from-[#0a1628] via-[#0d2240] to-[#0a1628] overflow-hidden">
+        <div className="absolute -top-24 -right-24 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
+        <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-violet-500/10 rounded-full blur-3xl" />
+        <div className="absolute inset-0 hero-grid-pattern opacity-10" />
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 md:px-8 py-10">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          {/* Top row */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-10">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-blue rounded-2xl flex items-center justify-center shadow-lg">
-                <User className="w-7 h-7 text-white" />
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shadow-lg text-white font-bold text-lg ring-2 ring-white/20">
+                {initials || <User className="w-7 h-7" />}
               </div>
               <div>
-                <p className="text-slate-400 text-sm font-medium uppercase tracking-wider">
+                <p className="text-slate-400 text-xs font-semibold uppercase tracking-widest mb-0.5">
                   Welcome back
                 </p>
-                <h1 className="font-heading text-2xl font-bold text-white mt-0.5">
-                  {user?.name}
-                </h1>
+                <h1 className="font-heading text-2xl font-bold text-white">{displayName}</h1>
               </div>
             </div>
-
-            <Button
-              variant="ghost"
-              onClick={handleLogout}
-              className="text-white/60 hover:text-white hover:bg-white/10 gap-2 self-start sm:self-auto"
-              id="dashboard-logout"
-            >
-              <LogOut className="w-4 h-4" />
-              Logout
-            </Button>
+            <LogoutButton />
           </div>
 
-          <div className="grid grid-cols-3 gap-4 mt-8">
-            {[
-              { icon: BookOpen, label: "Courses Enrolled", value: enrolledCourses.length },
-              { icon: PlayCircle, label: "Lessons Completed", value: 4 },
-              { icon: TrendingUp, label: "Overall Progress", value: "30%" },
-            ].map((stat) => (
+          {/* Stat cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {statCards.map((s, i) => (
               <div
-                key={stat.label}
-                className="bg-white rounded-2xl p-4 md:p-5 border border-gray-100 shadow-sm hover:shadow-md transition-shadow text-center"
+                key={s.label}
+                className="relative rounded-2xl p-5 overflow-hidden hover:scale-[1.02] transition-transform duration-300"
+                style={{
+                  background: "rgba(255,255,255,0.07)",
+                  backdropFilter: "blur(16px)",
+                  WebkitBackdropFilter: "blur(16px)",
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  boxShadow: "0 4px 24px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.1)",
+                }}
               >
-                <div className="w-10 h-10 bg-blue/10 rounded-xl flex items-center justify-center mx-auto mb-3">
-                  <stat.icon className="w-5 h-5 text-blue" />
+                <div className="absolute top-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
+                  style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.15)" }}
+                >
+                  <s.icon className={`w-5 h-5 ${s.iconColor}`} />
                 </div>
-                <div className="text-2xl md:text-3xl font-heading font-bold text-navy">{stat.value}</div>
-                <div className="text-slate-500 text-xs mt-0.5">{stat.label}</div>
+                <div className="text-3xl font-heading font-bold text-white mb-1">{statValues[i]}</div>
+                <div className="text-white/50 text-xs font-semibold uppercase tracking-wider">{s.label}</div>
               </div>
             ))}
           </div>
         </div>
       </div>
 
+      {/* ── Main content ── */}
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-10 space-y-12">
+
         {/* My Courses */}
         <section>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="font-heading text-xl font-bold text-navy flex items-center gap-2">
-              <span className="w-1 h-6 bg-blue rounded-full inline-block" />
-              My Courses
-            </h2>
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+              <BookOpen className="w-4 h-4 text-blue-600" />
+            </div>
+            <h2 className="font-heading text-xl font-bold text-slate-800">My Courses</h2>
           </div>
 
-          {enrolledCourses.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center">
-              <BookOpen className="w-12 h-12 text-muted mx-auto mb-4" />
-              <p className="text-muted mb-4">You haven&apos;t enrolled in any course yet.</p>
+          {enrollments.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-slate-100 p-12 text-center shadow-sm">
+              <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <BookOpen className="w-8 h-8 text-blue-400" />
+              </div>
+              <p className="text-slate-500 mb-5 font-medium">No courses yet — start your CA journey!</p>
               <Link href="/courses">
                 <Button variant="default">Browse Courses</Button>
               </Link>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {enrolledCourses.map((course) => (
-                <Card key={course.id} className="overflow-hidden">
-                  {/* Thumbnail strip */}
+              {enrollments.map((enrollment) => {
+                const isComplete = enrollment.status === "COMPLETED";
+                const pct = enrollment.progress.percent;
+                return (
                   <div
-                    className="h-3 w-full"
-                    style={{ background: course.color }}
-                  />
-                  <CardContent className="p-6">
-                    <div className="flex items-start gap-4">
-                      <div
-                        className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-                        style={{
-                          background: `${course.color}20`,
-                          color: course.color,
-                        }}
-                      >
-                        <PlayCircle className="w-6 h-6" />
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <Badge
-                          variant={levelVariantMap[course.level] || "foundation"}
-                          className="mb-2"
+                    key={enrollment.id}
+                    className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300"
+                  >
+                    <div className="h-1.5 w-full" style={{ background: enrollment.course.color }} />
+                    <div className="p-6">
+                      <div className="flex items-start gap-4 mb-5">
+                        <div
+                          className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm"
+                          style={{ background: `${enrollment.course.color}18`, color: enrollment.course.color }}
                         >
-                          {course.level}
-                        </Badge>
-                        <h3 className="font-bold text-navy text-sm leading-tight mb-1 line-clamp-2">
-                          {course.title}
-                        </h3>
-                        <div className="flex items-center gap-3 text-xs text-muted">
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            {course.duration}
-                          </span>
-                          <span>{course.videoCount} videos</span>
+                          {isComplete ? <Trophy className="w-6 h-6" /> : <PlayCircle className="w-6 h-6" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <Badge variant={levelVariantMap[enrollment.course.level] || "foundation"} className="mb-1.5">
+                            {levelLabel[enrollment.course.level]}
+                          </Badge>
+                          <h3 className="font-bold text-slate-800 text-sm leading-snug line-clamp-2">
+                            {enrollment.course.title}
+                          </h3>
+                          <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-1">
+                            <Clock className="w-3 h-3" /> {enrollment.course.duration}
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Progress */}
-                    <div className="mt-4">
-                      <div className="flex items-center justify-between mb-2 text-xs">
-                        <span className="text-muted">Progress</span>
-                        <span className="text-blue font-semibold">30% complete</span>
+                      {/* Progress */}
+                      <div className="mb-5">
+                        <div className="flex items-center justify-between text-xs mb-2">
+                          <span className="text-slate-500 font-medium">
+                            {enrollment.progress.completed} of {enrollment.progress.total} lessons
+                          </span>
+                          <span className="font-bold" style={{ color: isComplete ? "#16a34a" : enrollment.course.color }}>
+                            {pct}%
+                          </span>
+                        </div>
+                        <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{
+                              width: `${pct}%`,
+                              background: isComplete
+                                ? "linear-gradient(90deg,#22c55e,#16a34a)"
+                                : `linear-gradient(90deg,${enrollment.course.color}cc,${enrollment.course.color})`,
+                            }}
+                          />
+                        </div>
+                        {isComplete && (
+                          <div className="flex items-center gap-1.5 mt-2">
+                            <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
+                            <span className="text-xs text-emerald-600 font-semibold">Course Completed!</span>
+                          </div>
+                        )}
                       </div>
-                      <div className="progress-bar">
-                        <div className="progress-fill" style={{ width: "30%" }} />
-                      </div>
-                      <p className="text-xs text-muted mt-1.5">4 of {course.videoCount} lessons</p>
-                    </div>
 
-                    <Link href={`/dashboard/${course.id}`} className="block mt-4">
-                      <Button
-                        variant="default"
-                        className="w-full gap-2"
-                        id={`continue-${course.id}`}
-                      >
-                        <PlayCircle className="w-4 h-4" />
-                        Continue Learning
-                        <ChevronRight className="w-4 h-4 ml-auto" />
-                      </Button>
-                    </Link>
-                  </CardContent>
-                </Card>
-              ))}
+                      {/* Actions */}
+                      <div className="flex gap-2">
+                        <Link href={`/dashboard/${enrollment.course.id}`} className="flex-1">
+                          <Button
+                            variant="default"
+                            className="w-full gap-2 text-sm h-9"
+                            style={!isComplete ? { background: enrollment.course.color, borderColor: enrollment.course.color } : {}}
+                          >
+                            <PlayCircle className="w-4 h-4" />
+                            {isComplete ? "Review Course" : "Continue Learning"}
+                            <ChevronRight className="w-4 h-4 ml-auto" />
+                          </Button>
+                        </Link>
+                        {isComplete && enrollment.certificateId && (
+                          <Link href={`/api/certificates/${enrollment.certificateId}/download`}>
+                            <Button variant="outline" size="sm" className="gap-1.5 h-9 px-3 border-amber-400 text-amber-700 hover:bg-amber-500 hover:text-white hover:border-amber-500">
+                              <Award className="w-4 h-4" />
+                              Certificate
+                            </Button>
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </section>
 
-        {/* Explore More */}
-        {exploreMore.length > 0 && (
+        {/* Certificates */}
+        {certificates.length > 0 && (
           <section>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="font-bold text-navy text-xl">
-                Explore More Courses
-              </h2>
-              <Link href="/courses">
-                <button className="text-blue text-sm font-medium hover:underline flex items-center gap-1">
-                  View all <ChevronRight className="w-4 h-4" />
-                </button>
-              </Link>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                <Award className="w-4 h-4 text-amber-600" />
+              </div>
+              <h2 className="font-heading text-xl font-bold text-slate-800">My Certificates</h2>
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {exploreMore.map((course) => (
-                <Card key={course.id} className="overflow-hidden card-hover">
-                  <div className="h-3 w-full" style={{ background: course.color }} />
-                  <CardContent className="p-6">
-                    <div className="flex items-start gap-4 mb-4">
-                      <div
-                        className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-                        style={{ background: `${course.color}20`, color: course.color }}
-                      >
-                        <BookOpen className="w-6 h-6" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <Badge
-                          variant={levelVariantMap[course.level] || "foundation"}
-                          className="mb-2"
-                        >
-                          {course.level}
-                        </Badge>
-                        <h3 className="font-bold text-navy text-sm leading-tight mb-1 line-clamp-2">
-                          {course.title}
-                        </h3>
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-navy font-bold">
-                            ₹{course.price.toLocaleString()}
-                          </span>
-                          <span className="text-xs text-muted line-through">
-                            ₹{course.originalPrice.toLocaleString()}
-                          </span>
-                        </div>
-                      </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {certificates.map((cert) => (
+                <div
+                  key={cert.id}
+                  className="relative bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-100 rounded-2xl p-5 overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                >
+                  <div className="absolute -top-6 -right-6 w-24 h-24 bg-amber-200/30 rounded-full" />
+                  <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-amber-300/20 rounded-full" />
+                  <div className="relative flex items-center gap-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
+                      <Award className="w-6 h-6 text-white" />
                     </div>
-
-                    <Link href={`/checkout/${course.id}`}>
-                      <Button variant="outline" className="w-full" id={`explore-${course.id}`}>
-                        Enroll Now
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-slate-800 text-sm line-clamp-1">{cert.course.title}</p>
+                      <p className="text-xs text-amber-700/70 mt-0.5">
+                        {cert.certificateNo} · {new Date(cert.issuedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                      </p>
+                    </div>
+                    <Link href={`/api/certificates/${cert.id}/download`}>
+                      <Button size="sm" className="gap-1.5 bg-amber-500 hover:bg-amber-600 text-white border-0 shadow-sm">
+                        <Download className="w-3.5 h-3.5" />
+                        Download
                       </Button>
                     </Link>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               ))}
             </div>
           </section>
         )}
       </div>
     </div>
-  );
-}
-
-export default function DashboardPage() {
-  return (
-    <AuthGuard>
-      <DashboardInner />
-    </AuthGuard>
   );
 }

@@ -100,6 +100,7 @@ export default function InstructorProfile() {
                   src="/nikesh-shah.png"
                   alt="CA Nikesh Shah — CA Final Educator"
                   fill
+                  sizes="(max-width: 768px) 100vw, 288px"
                   className="object-cover object-top"
                   priority
                 />

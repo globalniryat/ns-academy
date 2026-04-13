@@ -12,6 +12,11 @@
 
 # testing
 /coverage
+/playwright-report
+/test-results
+
+# debug artifacts
+lint_out.json
 
 # next.js
 /.next/

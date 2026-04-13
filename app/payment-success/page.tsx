@@ -6,15 +6,13 @@ import { useSearchParams } from "next/navigation";
 import { CheckCircle, PlayCircle, LayoutDashboard, ArrowRight, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { courses } from "@/lib/courses";
 
 function PaymentSuccessContent() {
   const searchParams = useSearchParams();
   const courseId = searchParams?.get("course") || "";
-  const courseFromData = courses.find((c) => c.id === courseId);
-  const courseTitle =
-    courseFromData?.title ||
-    (searchParams?.get("title") ? decodeURIComponent(searchParams.get("title")!) : "Your Course");
+  const courseTitle = searchParams?.get("title")
+    ? decodeURIComponent(searchParams.get("title")!)
+    : "Your Course";
 
   // Confetti-like animation using CSS
   useEffect(() => {
@@ -88,8 +86,8 @@ function PaymentSuccessContent() {
             </div>
 
             {/* CTAs */}
-            <div className="space-y-3">
-              <Link href={courseId ? `/dashboard/${courseId}` : "/dashboard"}>
+            <div className="flex flex-col gap-3">
+              <Link href={courseId ? `/dashboard/${courseId}` : "/dashboard"} className="block">
                 <Button
                   variant="default"
                   className="w-full h-12 gap-2 text-base"
@@ -100,7 +98,7 @@ function PaymentSuccessContent() {
                   <ArrowRight className="w-4 h-4" />
                 </Button>
               </Link>
-              <Link href="/dashboard">
+              <Link href="/dashboard" className="block">
                 <Button variant="outline" className="w-full gap-2" id="go-dashboard-btn">
                   <LayoutDashboard className="w-4 h-4" />
                   Go to Dashboard
