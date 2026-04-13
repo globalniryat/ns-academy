@@ -167,12 +167,12 @@ describe('verifyPaymentSchema', () => {
   })
 
   it('rejects missing signature', () => {
-    const { razorpay_signature, ...rest } = valid
+    const { razorpay_signature: _sig, ...rest } = valid
     expect(verifyPaymentSchema.safeParse(rest).success).toBe(false)
   })
 
   it('rejects missing courseId', () => {
-    const { courseId, ...rest } = valid
+    const { courseId: _cid, ...rest } = valid
     expect(verifyPaymentSchema.safeParse(rest).success).toBe(false)
   })
 })

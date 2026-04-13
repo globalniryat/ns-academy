@@ -8,7 +8,6 @@ import {
   CheckCircle,
   Clock,
   Video,
-  ShieldCheck,
   ArrowRight,
   Flame,
   Star,

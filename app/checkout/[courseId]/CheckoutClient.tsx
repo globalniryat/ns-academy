@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   ArrowLeft, CheckCircle, ShieldCheck, Lock,
   Clock, PlayCircle, Infinity as InfinityIcon,
-  GraduationCap, Smartphone, Loader2,
+  GraduationCap, Smartphone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
