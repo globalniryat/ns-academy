@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+const isDev = process.env.NODE_ENV === "development";
+
 const nextConfig: NextConfig = {
   async headers() {
     return [
@@ -8,13 +10,13 @@ const nextConfig: NextConfig = {
         headers: [
           // ── Content Security Policy ────────────────────────────────────────
           // unsafe-inline kept for Next.js hydration scripts and Tailwind inline styles.
-          // unsafe-eval removed (not required in production builds).
+          // unsafe-eval allowed in dev only — React requires it for callstack reconstruction.
           // Razorpay checkout requires its CDN domain in script-src.
           {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' https://checkout.razorpay.com",
+              `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://checkout.razorpay.com`,
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: blob: https:",
