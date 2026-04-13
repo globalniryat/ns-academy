@@ -48,11 +48,13 @@ export default defineConfig({
     },
   ],
 
-  // Start the Next.js dev server before the suite (skipped if already running)
+  // In CI: build then start the production server (pre-compiles all routes,
+  // eliminating lazy-compile latency that causes auth timeouts in dev mode).
+  // Locally: reuse an already-running dev server if present.
   webServer: {
-    command: 'npm run dev',
+    command: process.env.CI ? 'npm run build && npm start' : 'npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    timeout: process.env.CI ? 300_000 : 120_000,
   },
 })
