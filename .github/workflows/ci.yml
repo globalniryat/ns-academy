@@ -13,6 +13,12 @@ jobs:
     name: Lint, Type-check & Unit Tests
     runs-on: ubuntu-latest
 
+    env:
+      # Prisma generate reads DATABASE_URL from prisma.config.ts — needs a syntactically
+      # valid URL even in CI (no real DB connection is made during generate).
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      DIRECT_URL: postgresql://ci:ci@localhost:5432/ci
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
