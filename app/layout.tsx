@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Playfair_Display, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
-import { ScrollToTop } from "@/components/ScrollToTop";
+import ConditionalPublicLayout from "@/components/layout/ConditionalPublicLayout";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -49,10 +47,7 @@ export default function RootLayout({
       className={`${inter.variable} ${playfair.variable} ${jakarta.variable} scroll-auto`}
     >
       <body>
-        <ScrollToTop />
-        <Navbar />
-        <main>{children}</main>
-        <Footer />
+        <ConditionalPublicLayout>{children}</ConditionalPublicLayout>
       </body>
     </html>
   );

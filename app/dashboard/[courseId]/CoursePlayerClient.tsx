@@ -99,11 +99,13 @@ export default function CoursePlayerClient({
       })
       .catch(() => {})
       .finally(() => setNoteLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeLesson?.id]);
 
   // Debounced note auto-save
   const noteSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lessonIdRef = useRef<string>("");
+   
   lessonIdRef.current = activeLesson?.id ?? "";
 
   const handleNoteChange = useCallback(

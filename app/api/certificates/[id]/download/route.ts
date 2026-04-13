@@ -40,19 +40,19 @@ export async function GET(_request: Request, { params }: Props) {
     }
 
     // Generate PDF buffer
-    const pdfBuffer = await renderToBuffer(
-      React.createElement(CertificatePDFDocument, {
-        studentName: certificate.user.name,
-        courseTitle: certificate.course.title,
-        certificateNo: certificate.certificateNo,
-        issuedAt: certificate.issuedAt,
-        instructorName: certificate.course.instructor,
-      })
-    );
+    const pdfElement = React.createElement(CertificatePDFDocument, {
+      studentName: certificate.user.name,
+      courseTitle: certificate.course.title,
+      certificateNo: certificate.certificateNo,
+      issuedAt: certificate.issuedAt,
+      instructorName: certificate.course.instructor,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    }) as any;
+    const pdfBuffer = await renderToBuffer(pdfElement);
 
     const filename = `certificate-${certificate.certificateNo}.pdf`;
 
-    return new Response(pdfBuffer, {
+    return new Response(new Uint8Array(pdfBuffer), {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${filename}"`,

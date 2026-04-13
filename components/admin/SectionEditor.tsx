@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { Plus, Trash2, ChevronDown, ChevronRight, Loader2, Edit2, Check, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Plus, Trash2, ChevronDown, ChevronRight, Edit2, Check, X, Video } from "lucide-react";
+import { Button, ButtonSpinner } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 interface Lesson {
@@ -26,21 +26,29 @@ interface Props {
   initialSections: Section[];
 }
 
+const emptyLesson = { title: "", videoUrl: "", duration: "", isFreePreview: false };
+
 export default function SectionEditor({ courseId, initialSections }: Props) {
   const [sections, setSections] = useState<Section[]>(initialSections);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState<Record<string, boolean>>({});
 
-  // Inline editing state
+  // Section editing
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
   const [editingSectionTitle, setEditingSectionTitle] = useState("");
+
+  // Lesson adding
   const [addingLessonToSection, setAddingLessonToSection] = useState<string | null>(null);
-  const [newLesson, setNewLesson] = useState({ title: "", videoUrl: "", duration: "", isFreePreview: false });
+  const [newLesson, setNewLesson] = useState(emptyLesson);
+
+  // Lesson editing
+  const [editingLessonId, setEditingLessonId] = useState<string | null>(null);
+  const [editingLesson, setEditingLesson] = useState(emptyLesson);
 
   const setLoad = (key: string, val: boolean) =>
     setLoading((prev) => ({ ...prev, [key]: val }));
 
-  // --- Section actions ---
+  // ── Section actions ────────────────────────────────────────
 
   const addSection = async () => {
     setLoad("addSection", true);
@@ -85,12 +93,11 @@ export default function SectionEditor({ courseId, initialSections }: Props) {
     setLoad(id, false);
   };
 
-  // --- Lesson actions ---
+  // ── Lesson actions ─────────────────────────────────────────
 
   const addLesson = async (sectionId: string) => {
     if (!newLesson.title || !newLesson.videoUrl) return;
     setLoad(`lesson-${sectionId}`, true);
-
     const section = sections.find((s) => s.id === sectionId)!;
     const res = await fetch("/api/admin/lessons", {
       method: "POST",
@@ -106,15 +113,58 @@ export default function SectionEditor({ courseId, initialSections }: Props) {
     });
     const data = await res.json();
     setLoad(`lesson-${sectionId}`, false);
-
     if (data.success) {
       setSections((prev) =>
         prev.map((s) =>
           s.id === sectionId ? { ...s, lessons: [...s.lessons, data.data] } : s
         )
       );
-      setNewLesson({ title: "", videoUrl: "", duration: "", isFreePreview: false });
+      setNewLesson(emptyLesson);
       setAddingLessonToSection(null);
+    }
+  };
+
+  const startEditLesson = (lesson: Lesson) => {
+    setEditingLessonId(lesson.id);
+    setEditingLesson({
+      title: lesson.title,
+      videoUrl: lesson.videoUrl,
+      duration: lesson.duration ?? "",
+      isFreePreview: lesson.isFreePreview,
+    });
+    // Close add form if open
+    setAddingLessonToSection(null);
+  };
+
+  const saveLesson = async (sectionId: string, lessonId: string) => {
+    if (!editingLesson.title || !editingLesson.videoUrl) return;
+    setLoad(`edit-lesson-${lessonId}`, true);
+    const res = await fetch(`/api/admin/lessons/${lessonId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: editingLesson.title,
+        videoUrl: editingLesson.videoUrl,
+        duration: editingLesson.duration || undefined,
+        isFreePreview: editingLesson.isFreePreview,
+      }),
+    });
+    const data = await res.json();
+    setLoad(`edit-lesson-${lessonId}`, false);
+    if (data.success) {
+      setSections((prev) =>
+        prev.map((s) =>
+          s.id === sectionId
+            ? {
+                ...s,
+                lessons: s.lessons.map((l) =>
+                  l.id === lessonId ? { ...l, ...data.data } : l
+                ),
+              }
+            : s
+        )
+      );
+      setEditingLessonId(null);
     }
   };
 
@@ -137,7 +187,7 @@ export default function SectionEditor({ courseId, initialSections }: Props) {
       {sections.map((section, idx) => (
         <div key={section.id} className="border border-gray-100 rounded-xl overflow-hidden bg-white shadow-sm">
           {/* Section header */}
-          <div className="flex items-center gap-2 px-4 py-3 bg-gray-50">
+          <div className="flex items-center gap-2 px-4 py-3 bg-gray-50/80 border-b border-gray-100">
             <button
               type="button"
               onClick={() => setExpanded((p) => ({ ...p, [section.id]: !p[section.id] }))}
@@ -163,9 +213,9 @@ export default function SectionEditor({ courseId, initialSections }: Props) {
                   type="button"
                   onClick={() => saveSection(section.id)}
                   disabled={loading[section.id]}
-                  className="p-1 text-teal hover:text-teal/80"
+                  className="p-1 text-green-600 hover:text-green-700"
                 >
-                  {loading[section.id] ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                  {loading[section.id] ? <ButtonSpinner className="w-4 h-4" /> : <Check className="w-4 h-4" />}
                 </button>
                 <button
                   type="button"
@@ -179,8 +229,8 @@ export default function SectionEditor({ courseId, initialSections }: Props) {
               <>
                 <span className="flex-1 text-sm font-semibold text-navy min-w-0 truncate">
                   {idx + 1}. {section.title}
-                  <span className="text-muted font-normal ml-2">
-                    ({section.lessons.length} lessons)
+                  <span className="text-muted font-normal ml-2 text-xs">
+                    {section.lessons.length} lesson{section.lessons.length !== 1 ? "s" : ""}
                   </span>
                 </span>
                 <button
@@ -189,7 +239,8 @@ export default function SectionEditor({ courseId, initialSections }: Props) {
                     setEditingSectionId(section.id);
                     setEditingSectionTitle(section.title);
                   }}
-                  className="p-1 text-muted hover:text-blue transition-colors"
+                  className="p-1.5 text-muted hover:text-blue transition-colors rounded-lg hover:bg-blue/10"
+                  title="Rename section"
                 >
                   <Edit2 className="w-3.5 h-3.5" />
                 </button>
@@ -197,10 +248,11 @@ export default function SectionEditor({ courseId, initialSections }: Props) {
                   type="button"
                   onClick={() => deleteSection(section.id)}
                   disabled={loading[section.id]}
-                  className="p-1 text-muted hover:text-red-500 transition-colors"
+                  className="p-1.5 text-muted hover:text-red-500 transition-colors rounded-lg hover:bg-red-50"
+                  title="Delete section"
                 >
                   {loading[section.id] ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <ButtonSpinner className="w-3.5 h-3.5" />
                   ) : (
                     <Trash2 className="w-3.5 h-3.5" />
                   )}
@@ -213,37 +265,111 @@ export default function SectionEditor({ courseId, initialSections }: Props) {
           {expanded[section.id] && (
             <div className="divide-y divide-gray-50">
               {section.lessons.map((lesson, lIdx) => (
-                <div key={lesson.id} className="flex items-center gap-3 px-4 py-2.5">
-                  <span className="text-xs text-muted w-5 shrink-0">{lIdx + 1}.</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-bodytext line-clamp-1">{lesson.title}</p>
-                    {lesson.duration && (
-                      <p className="text-xs text-muted">{lesson.duration}</p>
-                    )}
-                  </div>
-                  {lesson.isFreePreview && (
-                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full shrink-0">
-                      Free
-                    </span>
+                <div key={lesson.id}>
+                  {editingLessonId === lesson.id ? (
+                    /* ── Inline lesson edit form ── */
+                    <div className="px-4 py-3 bg-amber-50/60 space-y-2 border-l-2 border-amber-400">
+                      <Input
+                        value={editingLesson.title}
+                        onChange={(e) => setEditingLesson((p) => ({ ...p, title: e.target.value }))}
+                        placeholder="Lesson title *"
+                        className="text-sm h-9"
+                        autoFocus
+                      />
+                      <Input
+                        value={editingLesson.videoUrl}
+                        onChange={(e) => setEditingLesson((p) => ({ ...p, videoUrl: e.target.value }))}
+                        placeholder="YouTube URL or video URL *"
+                        className="text-sm h-9 font-mono"
+                      />
+                      <div className="flex items-center gap-3">
+                        <Input
+                          value={editingLesson.duration}
+                          onChange={(e) => setEditingLesson((p) => ({ ...p, duration: e.target.value }))}
+                          placeholder="Duration (e.g. 45 min)"
+                          className="text-sm h-9 flex-1"
+                        />
+                        <label className="flex items-center gap-1.5 text-sm text-muted shrink-0 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={editingLesson.isFreePreview}
+                            onChange={(e) => setEditingLesson((p) => ({ ...p, isFreePreview: e.target.checked }))}
+                            className="rounded"
+                          />
+                          Free preview
+                        </label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="default"
+                          size="sm"
+                          onClick={() => saveLesson(section.id, lesson.id)}
+                          loading={loading[`edit-lesson-${lesson.id}`]}
+                          loadingText="Saving…"
+                          disabled={loading[`edit-lesson-${lesson.id}`]}
+                          className="gap-1.5"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          Save
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setEditingLessonId(null)}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    /* ── Lesson row ── */
+                    <div className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50/50 group transition-colors">
+                      <span className="text-xs text-muted w-5 shrink-0 font-mono">{lIdx + 1}.</span>
+                      <Video className="w-3.5 h-3.5 text-muted shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-bodytext line-clamp-1">{lesson.title}</p>
+                        {lesson.duration && (
+                          <p className="text-xs text-muted">{lesson.duration}</p>
+                        )}
+                      </div>
+                      {lesson.isFreePreview && (
+                        <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full shrink-0">
+                          Free
+                        </span>
+                      )}
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => startEditLesson(lesson)}
+                          className="p-1.5 text-muted hover:text-blue transition-colors rounded-lg hover:bg-blue/10"
+                          title="Edit lesson"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteLesson(section.id, lesson.id)}
+                          disabled={loading[`del-lesson-${lesson.id}`]}
+                          className="p-1.5 text-muted hover:text-red-500 transition-colors rounded-lg hover:bg-red-50"
+                          title="Delete lesson"
+                        >
+                          {loading[`del-lesson-${lesson.id}`] ? (
+                            <ButtonSpinner className="w-3.5 h-3.5" />
+                          ) : (
+                            <Trash2 className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => deleteLesson(section.id, lesson.id)}
-                    disabled={loading[`del-lesson-${lesson.id}`]}
-                    className="p-1 text-muted hover:text-red-500 transition-colors shrink-0"
-                  >
-                    {loading[`del-lesson-${lesson.id}`] ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Trash2 className="w-3.5 h-3.5" />
-                    )}
-                  </button>
                 </div>
               ))}
 
               {/* Add lesson form */}
               {addingLessonToSection === section.id ? (
-                <div className="px-4 py-3 bg-blue/5 space-y-2">
+                <div className="px-4 py-3 bg-blue/5 space-y-2 border-l-2 border-blue">
                   <Input
                     placeholder="Lesson title *"
                     value={newLesson.title}
@@ -280,12 +406,12 @@ export default function SectionEditor({ courseId, initialSections }: Props) {
                       variant="default"
                       size="sm"
                       onClick={() => addLesson(section.id)}
+                      loading={loading[`lesson-${section.id}`]}
+                      loadingText="Adding…"
                       disabled={loading[`lesson-${section.id}`]}
                       className="gap-1.5"
                     >
-                      {loading[`lesson-${section.id}`] ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : null}
+                      <Plus className="w-3.5 h-3.5" />
                       Add Lesson
                     </Button>
                     <Button
@@ -294,7 +420,7 @@ export default function SectionEditor({ courseId, initialSections }: Props) {
                       size="sm"
                       onClick={() => {
                         setAddingLessonToSection(null);
-                        setNewLesson({ title: "", videoUrl: "", duration: "", isFreePreview: false });
+                        setNewLesson(emptyLesson);
                       }}
                     >
                       Cancel
@@ -302,12 +428,13 @@ export default function SectionEditor({ courseId, initialSections }: Props) {
                   </div>
                 </div>
               ) : (
-                <div className="px-4 py-2">
+                <div className="px-4 py-2.5">
                   <button
                     type="button"
                     onClick={() => {
                       setAddingLessonToSection(section.id);
-                      setNewLesson({ title: "", videoUrl: "", duration: "", isFreePreview: false });
+                      setEditingLessonId(null);
+                      setNewLesson(emptyLesson);
                     }}
                     className="flex items-center gap-1.5 text-sm text-blue hover:text-blue/80 transition-colors"
                   >
@@ -326,14 +453,12 @@ export default function SectionEditor({ courseId, initialSections }: Props) {
         type="button"
         variant="outline"
         onClick={addSection}
+        loading={loading["addSection"]}
+        loadingText="Adding section…"
         disabled={loading["addSection"]}
-        className="gap-2 w-full"
+        className="gap-2 w-full border-dashed"
       >
-        {loading["addSection"] ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
-        ) : (
-          <Plus className="w-4 h-4" />
-        )}
+        <Plus className="w-4 h-4" />
         Add Section
       </Button>
     </div>

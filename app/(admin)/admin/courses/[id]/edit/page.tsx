@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, FileText } from "lucide-react";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import CourseForm from "@/components/admin/CourseForm";
 import SectionEditor from "@/components/admin/SectionEditor";
+import CourseNotesEditor from "@/components/admin/CourseNotesEditor";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -12,15 +13,21 @@ interface Props {
 export default async function EditCoursePage({ params }: Props) {
   const { id } = await params;
 
-  const course = await prisma.course.findUnique({
-    where: { id },
-    include: {
-      sections: {
-        orderBy: { sortOrder: "asc" },
-        include: { lessons: { orderBy: { sortOrder: "asc" } } },
+  const [course, notes] = await Promise.all([
+    prisma.course.findUnique({
+      where: { id },
+      include: {
+        sections: {
+          orderBy: { sortOrder: "asc" },
+          include: { lessons: { orderBy: { sortOrder: "asc" } } },
+        },
       },
-    },
-  });
+    }),
+    prisma.courseNote.findMany({
+      where: { courseId: id },
+      orderBy: { sortOrder: "asc" },
+    }),
+  ]);
 
   if (!course) notFound();
 
@@ -56,7 +63,7 @@ export default async function EditCoursePage({ params }: Props) {
       {/* Course details form */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
         <h2 className="font-heading font-bold text-navy mb-5">Course Details</h2>
-        <CourseForm courseId={id} initial={initialFormData} />
+        <CourseForm courseId={id} initial={initialFormData} initialWhatYoullLearn={course.whatYoullLearn} />
       </div>
 
       {/* Curriculum editor */}
@@ -69,6 +76,27 @@ export default async function EditCoursePage({ params }: Props) {
           </p>
         </div>
         <SectionEditor courseId={id} initialSections={course.sections} />
+      </div>
+
+      {/* Course materials */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <div className="flex items-center gap-2 mb-5">
+          <FileText className="w-4 h-4 text-muted" />
+          <div>
+            <h2 className="font-heading font-bold text-navy">Course Materials</h2>
+            <p className="text-muted text-sm mt-0.5">PDFs, notes, and resource links for students.</p>
+          </div>
+        </div>
+        <CourseNotesEditor
+          courseId={id}
+          initialNotes={notes.map((n) => ({
+            id: n.id,
+            title: n.title,
+            fileUrl: n.fileUrl,
+            sortOrder: n.sortOrder,
+            createdAt: n.createdAt.toISOString(),
+          }))}
+        />
       </div>
     </div>
   );

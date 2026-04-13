@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, AlertCircle } from "lucide-react";
+import { AlertCircle, X, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +28,7 @@ interface CourseFormData {
 interface Props {
   courseId?: string;
   initial?: Partial<CourseFormData>;
+  initialWhatYoullLearn?: string[];
   onSuccess?: () => void;
 }
 
@@ -53,9 +54,13 @@ function slugify(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
 
-export default function CourseForm({ courseId, initial = {}, onSuccess }: Props) {
+export default function CourseForm({ courseId, initial = {}, initialWhatYoullLearn = [], onSuccess }: Props) {
   const [form, setForm] = useState<CourseFormData>({ ...DEFAULT, ...initial });
+  const [whatYoullLearn, setWhatYoullLearn] = useState<string[]>(
+    initialWhatYoullLearn.length > 0 ? initialWhatYoullLearn : [""]
+  );
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
   const isEdit = !!courseId;
@@ -67,16 +72,28 @@ export default function CourseForm({ courseId, initial = {}, onSuccess }: Props)
       ...(k === "title" && !isEdit ? { slug: slugify(v) } : {}),
     }));
 
+  const addLearningPoint = () => setWhatYoullLearn((p) => [...p, ""]);
+  const updateLearningPoint = (i: number, v: string) =>
+    setWhatYoullLearn((p) => p.map((x, idx) => (idx === i ? v : x)));
+  const removeLearningPoint = (i: number) =>
+    setWhatYoullLearn((p) => p.filter((_, idx) => idx !== i));
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setLoading(true);
 
+    const filtered = whatYoullLearn.filter((s) => s.trim().length > 0);
+    if (filtered.length === 0) {
+      setError("Add at least one learning outcome.");
+      return;
+    }
+
+    setLoading(true);
     const payload = {
       ...form,
-      price: parseInt(form.price) * 100, // rupees → paise
+      price: parseInt(form.price) * 100,
       originalPrice: parseInt(form.originalPrice) * 100,
-      whatYoullLearn: [],
+      whatYoullLearn: filtered,
     };
 
     const url = isEdit ? `/api/admin/courses/${courseId}` : "/api/admin/courses";
@@ -102,6 +119,23 @@ export default function CourseForm({ courseId, initial = {}, onSuccess }: Props)
       router.refresh();
     }
   };
+
+  const handleDelete = async () => {
+    if (!courseId) return;
+    if (!confirm("Permanently delete this course? This will also delete all sections, lessons, and enrollments.")) return;
+    setDeleting(true);
+    const res = await fetch(`/api/admin/courses/${courseId}`, { method: "DELETE" });
+    const data = await res.json();
+    setDeleting(false);
+    if (data.success) {
+      router.push("/admin/courses");
+      router.refresh();
+    } else {
+      setError("Failed to delete course.");
+    }
+  };
+
+  const fieldClass = "w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue";
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -167,8 +201,43 @@ export default function CourseForm({ courseId, initial = {}, onSuccess }: Props)
             onChange={(e) => set("description", e.target.value)}
             rows={5}
             placeholder="Detailed course description (markdown supported)"
-            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue resize-none"
+            className={`${fieldClass} resize-none`}
           />
+        </div>
+
+        {/* What You'll Learn */}
+        <div className="md:col-span-2">
+          <Label className="mb-1.5 block text-sm font-medium text-navy">What You&apos;ll Learn *</Label>
+          <p className="text-xs text-muted mb-2">Add key learning outcomes shown on the course page.</p>
+          <div className="space-y-2">
+            {whatYoullLearn.map((point, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <Input
+                  value={point}
+                  onChange={(e) => updateLearningPoint(i, e.target.value)}
+                  placeholder={`e.g. Master SFM concepts and applications`}
+                  className="flex-1"
+                />
+                {whatYoullLearn.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeLearningPoint(i)}
+                    className="p-2 text-muted hover:text-red-500 transition-colors shrink-0"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={addLearningPoint}
+            className="mt-2 flex items-center gap-1.5 text-sm text-blue hover:text-blue/80 transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Add outcome
+          </button>
         </div>
 
         {/* Level */}
@@ -177,7 +246,7 @@ export default function CourseForm({ courseId, initial = {}, onSuccess }: Props)
           <select
             value={form.level}
             onChange={(e) => set("level", e.target.value)}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue"
+            className={fieldClass}
           >
             <option value="FOUNDATION">Foundation</option>
             <option value="INTERMEDIATE">Intermediate</option>
@@ -191,7 +260,7 @@ export default function CourseForm({ courseId, initial = {}, onSuccess }: Props)
           <select
             value={form.status}
             onChange={(e) => set("status", e.target.value)}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue/20 focus:border-blue"
+            className={fieldClass}
           >
             <option value="DRAFT">Draft</option>
             <option value="PUBLISHED">Published</option>
@@ -199,7 +268,7 @@ export default function CourseForm({ courseId, initial = {}, onSuccess }: Props)
           </select>
         </div>
 
-        {/* Price (rupees) */}
+        {/* Price */}
         <div>
           <Label className="mb-1.5 block text-sm font-medium text-navy">Price (₹) *</Label>
           <Input
@@ -294,23 +363,41 @@ export default function CourseForm({ courseId, initial = {}, onSuccess }: Props)
         </div>
       </div>
 
-      <div className="flex items-center gap-3 pt-2">
-        <Button type="submit" variant="default" disabled={loading} className="gap-2 min-w-[140px]">
-          {loading ? (
-            <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
-          ) : isEdit ? (
-            "Save Changes"
-          ) : (
-            "Create Course"
-          )}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => router.push("/admin/courses")}
-        >
-          Cancel
-        </Button>
+      <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+        <div className="flex items-center gap-3">
+          <Button
+            type="submit"
+            variant="default"
+            loading={loading}
+            loadingText="Saving…"
+            disabled={loading || deleting}
+            className="gap-2 min-w-[140px]"
+          >
+            {isEdit ? "Save Changes" : "Create Course"}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => router.push("/admin/courses")}
+            disabled={loading || deleting}
+          >
+            Cancel
+          </Button>
+        </div>
+        {isEdit && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleDelete}
+            loading={deleting}
+            loadingText="Deleting…"
+            disabled={loading || deleting}
+            className="gap-2 text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+          >
+            <Trash2 className="w-4 h-4" />
+            Delete Course
+          </Button>
+        )}
       </div>
     </form>
   );

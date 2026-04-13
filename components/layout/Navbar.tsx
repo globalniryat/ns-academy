@@ -37,11 +37,13 @@ export default function Navbar() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsOpen(false);
   }, [pathname]);
 
   useEffect(() => {
     if (pathname !== "/") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveSection("");
       return;
     }

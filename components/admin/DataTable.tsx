@@ -9,7 +9,7 @@ interface Column<T> {
   render?: (row: T) => React.ReactNode;
 }
 
-interface Props<T extends Record<string, unknown>> {
+interface Props<T extends object> {
   data: T[];
   columns: Column<T>[];
   pageSize?: number;
@@ -17,7 +17,7 @@ interface Props<T extends Record<string, unknown>> {
   emptyMessage?: string;
 }
 
-export default function DataTable<T extends Record<string, unknown>>({
+export default function DataTable<T extends object>({
   data,
   columns,
   pageSize = 20,
@@ -30,7 +30,7 @@ export default function DataTable<T extends Record<string, unknown>>({
   const filtered = query
     ? data.filter((row) =>
         searchKeys.some((k) =>
-          String(row[k] ?? "").toLowerCase().includes(query.toLowerCase())
+          String((row as Record<string, unknown>)[k as string] ?? "").toLowerCase().includes(query.toLowerCase())
         )
       )
     : data;
@@ -82,7 +82,7 @@ export default function DataTable<T extends Record<string, unknown>>({
                 <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
                   {columns.map((col) => (
                     <td key={col.key} className="px-4 py-3 text-sm text-bodytext">
-                      {col.render ? col.render(row) : String(row[col.key] ?? "")}
+                      {col.render ? col.render(row) : String((row as Record<string, unknown>)[col.key] ?? "")}
                     </td>
                   ))}
                 </tr>

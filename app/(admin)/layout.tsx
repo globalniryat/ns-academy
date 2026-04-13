@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import AdminSidebar from "@/components/admin/AdminSidebar";
+import AdminNavProgress from "@/components/admin/AdminNavProgress";
 
 export default async function AdminLayout({
   children,
@@ -31,8 +32,9 @@ export default async function AdminLayout({
 
   return (
     <div className="flex min-h-screen bg-gray-50">
+      <AdminNavProgress />
       <AdminSidebar />
-      <main className="flex-1 overflow-auto">{children}</main>
+      <main className="flex-1 overflow-auto lg:pt-0 pt-14">{children}</main>
     </div>
   );
 }

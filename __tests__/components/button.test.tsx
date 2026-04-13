@@ -68,8 +68,10 @@ describe('Button component', () => {
     const { container } = render(<Button loading>Submit</Button>)
     const svg = container.querySelector('svg')
     expect(svg).toBeInTheDocument()
-    // SVG className is an SVGAnimatedString — use getAttribute instead
-    expect(svg?.getAttribute('class')).toMatch(/animate-spin/)
+    // ButtonSpinner uses inline style animation (not Tailwind animate-spin class)
+    // because Tailwind v4 JIT may not generate the keyframe — see globals.css @keyframes spin
+    const style = svg?.getAttribute('style') ?? ''
+    expect(style).toMatch(/animation/)
   })
 
   it('is not disabled when loading is false', () => {
