@@ -12,6 +12,7 @@ vi.mock('@/lib/prisma', () => ({
       create: vi.fn(),
       update: vi.fn(),
     },
+    enrollment: { findUnique: vi.fn() },
   },
 }))
 
@@ -99,6 +100,7 @@ describe('POST /api/notes', () => {
 
   it('creates a new note when none exists for the lesson', async () => {
     mockAuth()
+    vi.mocked(prisma.enrollment.findUnique).mockResolvedValue({ id: 'enr_001' } as never)
     vi.mocked(prisma.userNote.findFirst).mockResolvedValue(null)
     vi.mocked(prisma.userNote.create).mockResolvedValue({ id: 'note_new', content: 'New note' } as never)
 
@@ -125,6 +127,7 @@ describe('POST /api/notes', () => {
 
   it('creates a note without lessonId when only courseId is provided', async () => {
     mockAuth()
+    vi.mocked(prisma.enrollment.findUnique).mockResolvedValue({ id: 'enr_001' } as never)
     vi.mocked(prisma.userNote.create).mockResolvedValue({ id: 'note_course' } as never)
 
     const res = await POST(makePOST({ courseId: 'c1', content: 'Course note' }))

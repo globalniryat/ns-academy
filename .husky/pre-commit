@@ -1,7 +1,14 @@
 #!/bin/sh
-# Run unit + API tests before every commit.
-# Fast path: only runs Vitest (no E2E) to keep commits snappy.
-# Full E2E suite runs in CI on push.
+# Pre-commit hook — runs on every git commit
+#
+# 1. lint-staged  — ESLint on staged .ts/.tsx files only (fast, targeted)
+# 2. vitest run   — all unit + API tests (~3s, no E2E)
+#
+# E2E (Playwright) is NOT run here — it requires a live DB and dev server.
+# Full E2E runs automatically in GitHub Actions on every push.
 
-echo "▶ Running unit & API tests (pre-commit)..."
+echo "▶ Linting staged files..."
+npx lint-staged
+
+echo "▶ Running unit & API tests..."
 npm run test

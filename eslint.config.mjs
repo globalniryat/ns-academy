@@ -13,6 +13,13 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  // Project-wide rule overrides
+  {
+    rules: {
+      // Allow _ prefixed variables to be unused (intentionally unused parameters/vars)
+      '@typescript-eslint/no-unused-vars': ['warn', { varsIgnorePattern: '^_', argsIgnorePattern: '^_' }],
+    },
+  },
 ]);
 
 export default eslintConfig;

@@ -61,6 +61,7 @@ describe('GET /api/progress', () => {
 
   it('returns progress map keyed by lessonId', async () => {
     mockAuth()
+    vi.mocked(prisma.enrollment.findUnique).mockResolvedValue({ id: 'enr_001' } as never)
     vi.mocked(prisma.lesson.findMany).mockResolvedValue([
       { id: 'lesson_1' }, { id: 'lesson_2' },
     ] as never)
@@ -79,6 +80,7 @@ describe('GET /api/progress', () => {
 
   it('returns empty progress map when user has no progress', async () => {
     mockAuth()
+    vi.mocked(prisma.enrollment.findUnique).mockResolvedValue({ id: 'enr_001' } as never)
     vi.mocked(prisma.lesson.findMany).mockResolvedValue([{ id: 'lesson_1' }] as never)
     vi.mocked(prisma.lessonProgress.findMany).mockResolvedValue([] as never)
 

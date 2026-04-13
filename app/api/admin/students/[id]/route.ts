@@ -18,7 +18,16 @@ export async function GET(_req: Request, { params }: Props) {
           orderBy: { enrolledAt: 'desc' },
         },
         payments: {
-          include: { course: { select: { title: true } } },
+          select: {
+            id: true,
+            amount: true,
+            status: true,
+            razorpayOrderId: true,
+            razorpayPaymentId: true,
+            // razorpaySignature intentionally excluded — never expose HMAC secrets
+            createdAt: true,
+            course: { select: { title: true } },
+          },
           orderBy: { createdAt: 'desc' },
         },
         certificates: {

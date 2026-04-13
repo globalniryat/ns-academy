@@ -6,15 +6,12 @@ export default defineConfig({
   plugins: [react()],
   test: {
     globals: true,
-    // Node environment for API/lib tests; jsdom used per-file via @vitest-environment directive
+    // Node environment for API/lib tests.
+    // Component tests use // @vitest-environment jsdom directive at the top of each file.
     environment: 'node',
     // E2E specs are run by Playwright, not Vitest
     exclude: ['**/node_modules/**', '**/e2e/**'],
     setupFiles: ['./vitest.setup.ts'],
-    environmentMatchGlobs: [
-      // Component tests run in jsdom
-      ['__tests__/components/**', 'jsdom'],
-    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov', 'html'],

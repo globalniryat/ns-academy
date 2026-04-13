@@ -21,22 +21,22 @@ export const registerSchema = z.object({
 // ── COURSES ───────────────────────────────────────────────
 
 export const courseSchema = z.object({
-  slug: z.string().min(1),
-  title: z.string().min(3),
-  shortDescription: z.string().min(10),
-  description: z.string().min(20),
+  slug: z.string().min(1).max(100).regex(/^[a-z0-9-]+$/, 'Slug must be lowercase letters, numbers, and hyphens only'),
+  title: z.string().min(3).max(200),
+  shortDescription: z.string().min(10).max(500),
+  description: z.string().min(20).max(10000),
   level: z.enum(['FOUNDATION', 'INTERMEDIATE', 'FINAL']),
   status: z.enum(['DRAFT', 'PUBLISHED', 'ARCHIVED']).default('DRAFT'),
-  price: z.number().int().positive(),
-  originalPrice: z.number().int().positive(),
-  duration: z.string(),
-  color: z.string().default('#16a34a'),
-  instructor: z.string().default('CA Nikesh Shah'),
-  whatYoullLearn: z.array(z.string()).min(1),
-  metaTitle: z.string().optional(),
-  metaDescription: z.string().optional(),
-  freePreviewUrl: z.string().optional(),
-  thumbnailUrl: z.string().optional(),
+  price: z.number().int().positive().max(10_000_000), // max ₹1,00,000 (in paise)
+  originalPrice: z.number().int().positive().max(10_000_000),
+  duration: z.string().max(50),
+  color: z.string().max(20).default('#16a34a'),
+  instructor: z.string().max(100).default('CA Nikesh Shah'),
+  whatYoullLearn: z.array(z.string().max(200)).min(1).max(20),
+  metaTitle: z.string().max(100).optional(),
+  metaDescription: z.string().max(300).optional(),
+  freePreviewUrl: z.string().url().optional().or(z.literal('')),
+  thumbnailUrl: z.string().url().optional().or(z.literal('')),
 })
 
 export const sectionSchema = z.object({
@@ -47,10 +47,10 @@ export const sectionSchema = z.object({
 
 export const lessonSchema = z.object({
   sectionId: z.string(),
-  title: z.string().min(2),
-  videoUrl: z.string(),
-  duration: z.string().optional(),
-  description: z.string().optional(),
+  title: z.string().min(2).max(200),
+  videoUrl: z.string().url('Must be a valid URL'),
+  duration: z.string().max(20).optional(),
+  description: z.string().max(2000).optional(),
   isFreePreview: z.boolean().default(false),
   sortOrder: z.number().int().default(0),
 })
@@ -81,10 +81,10 @@ export const updateContentSchema = z.object({
 // ── TESTIMONIAL ───────────────────────────────────────────
 
 export const testimonialSchema = z.object({
-  name: z.string().min(2),
-  college: z.string().optional(),
-  role: z.string().optional(),
-  quote: z.string().min(10),
+  name: z.string().min(2).max(100),
+  college: z.string().max(150).optional(),
+  role: z.string().max(100).optional(),
+  quote: z.string().min(10).max(1000),
   rating: z.number().int().min(1).max(5).default(5),
   isActive: z.boolean().default(true),
   sortOrder: z.number().int().default(0),
@@ -93,8 +93,8 @@ export const testimonialSchema = z.object({
 // ── FAQ ───────────────────────────────────────────────────
 
 export const faqSchema = z.object({
-  question: z.string().min(5),
-  answer: z.string().min(10),
+  question: z.string().min(5).max(300),
+  answer: z.string().min(10).max(3000),
   isActive: z.boolean().default(true),
   sortOrder: z.number().int().default(0),
 })

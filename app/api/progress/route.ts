@@ -14,6 +14,14 @@ export async function GET(request: Request) {
   if (!courseId) return NextResponse.json({ success: false, error: 'courseId required' }, { status: 400 })
 
   try {
+    // Verify the user is enrolled before exposing any lesson data
+    const enrollment = await prisma.enrollment.findUnique({
+      where: { userId_courseId: { userId: user.id, courseId } },
+    })
+    if (!enrollment) {
+      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
+    }
+
     // Get all lesson IDs in the course
     const lessons = await prisma.lesson.findMany({
       where: { section: { courseId } },

@@ -45,6 +45,16 @@ export async function POST(request: Request) {
 
     const { lessonId, courseId, content } = parsed.data
 
+    // Verify enrollment before allowing note creation
+    if (courseId) {
+      const enrollment = await prisma.enrollment.findUnique({
+        where: { userId_courseId: { userId: user.id, courseId } },
+      })
+      if (!enrollment) {
+        return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
+      }
+    }
+
     // Upsert note for this user+lesson combo
     let note
     if (lessonId) {

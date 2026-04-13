@@ -36,7 +36,6 @@ export async function proxy(request: NextRequest) {
     if (!user) {
       return NextResponse.redirect(new URL('/admin/login', request.url))
     }
-    // Role check via user_metadata (set during admin creation / seed)
     const role = user.user_metadata?.role
     if (role !== 'ADMIN') {
       return NextResponse.redirect(new URL('/admin/login?error=unauthorized', request.url))
@@ -48,7 +47,7 @@ export async function proxy(request: NextRequest) {
     (path.startsWith('/dashboard') || path.startsWith('/checkout')) &&
     !user
   ) {
-    const redirectUrl = new URL(`/login`, request.url)
+    const redirectUrl = new URL('/login', request.url)
     redirectUrl.searchParams.set('redirect', path)
     return NextResponse.redirect(redirectUrl)
   }
@@ -62,9 +61,8 @@ export const config = {
      * Match all request paths except:
      * - _next/static (static files)
      * - _next/image (image optimization)
-     * - favicon.ico (favicon)
+     * - favicon.ico
      * - public folder files (png, jpg, svg, etc.)
-     * - api/auth routes (handled separately)
      */
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
