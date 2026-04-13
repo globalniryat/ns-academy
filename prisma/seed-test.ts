@@ -34,7 +34,9 @@ function parseDbUrl(url: string) {
   }
 }
 
-const pool = new Pool(parseDbUrl(process.env.DIRECT_URL!))
+// Use pooler URL (port 6543) — reachable from GitHub Actions / Vercel.
+// DIRECT_URL (port 5432) is blocked in most hosted environments.
+const pool = new Pool(parseDbUrl(process.env.DATABASE_URL!))
 const adapter = new PrismaPg(pool)
 const prisma = new PrismaClient({ adapter })
 
