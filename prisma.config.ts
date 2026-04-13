@@ -5,6 +5,6 @@ export default defineConfig({
     url: process.env.DIRECT_URL ?? process.env.DATABASE_URL,
   },
   migrations: {
-    seed: 'ts-node --compiler-options {"module":"CommonJS"} prisma/seed.ts',
+    seed: 'ts-node --project tsconfig.seed.json prisma/seed.ts',
   },
 })
