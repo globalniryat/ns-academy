@@ -51,7 +51,7 @@ async function ensureUser(email: string, password: string, name: string, role: '
     email,
     password,
     email_confirm: true,
-    user_metadata: { full_name: name },
+    user_metadata: { full_name: name, role },
   })
 
   let userId: string
@@ -63,8 +63,11 @@ async function ensureUser(email: string, password: string, name: string, role: '
       const existing = list?.users?.find((u) => u.email === email)
       if (!existing) throw new Error(`Cannot find existing user: ${email}`)
       userId = existing.id
-      // Ensure password is as expected (update it)
-      await supabaseAdmin.auth.admin.updateUserById(userId, { password })
+      // Ensure password and metadata are up to date
+      await supabaseAdmin.auth.admin.updateUserById(userId, {
+        password,
+        user_metadata: { full_name: name, role },
+      })
     } else {
       throw createErr
     }
