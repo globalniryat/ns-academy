@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 
 /**
  * Authentication flow E2E tests.
@@ -10,6 +10,29 @@ import { test, expect } from '@playwright/test'
 
 const STUDENT_EMAIL = process.env.TEST_STUDENT_EMAIL ?? 'testplayer@nsacademy.dev'
 const STUDENT_PASSWORD = process.env.TEST_STUDENT_PASSWORD ?? 'TestPass@1234'
+
+/**
+ * Click the logout button on any viewport.
+ *
+ * On desktop (≥ md breakpoint) the Navbar renders an icon-only button with
+ * aria-label="Logout" inside a `hidden md:flex` wrapper — visible and clickable.
+ *
+ * On mobile (< md breakpoint, e.g. iPhone 14) that wrapper has display:none and
+ * is excluded from the accessibility tree.  The "Sign Out" text button lives
+ * inside the mobile drawer, which is only rendered when `isOpen === true`.
+ * We must click the hamburger first to open the drawer, then click Sign Out.
+ */
+async function clickLogout(page: Page) {
+  const hamburger = page.getByRole('button', { name: 'Toggle menu' })
+  if (await hamburger.isVisible()) {
+    await hamburger.click()
+    // Wait for drawer to be visible before clicking Sign Out
+    await expect(
+      page.getByRole('button', { name: /sign out/i })
+    ).toBeVisible({ timeout: 5_000 })
+  }
+  await page.getByRole('button', { name: /sign out|log out|logout/i }).click()
+}
 
 test.describe('Authentication', () => {
   // ── Login ──────────────────────────────────────────────────────────────────
@@ -94,8 +117,7 @@ test.describe('Authentication', () => {
       await page.getByRole('button', { name: /log in|sign in/i }).click()
       await page.waitForURL(/dashboard/)
 
-      // Logout — button label is "Sign Out"
-      await page.getByRole('button', { name: /sign out|log out|logout/i }).click()
+      await clickLogout(page)
       await expect(page).toHaveURL('/', { timeout: 10_000 })
     })
 
@@ -107,8 +129,7 @@ test.describe('Authentication', () => {
       await page.getByRole('button', { name: /log in|sign in/i }).click()
       await page.waitForURL(/dashboard/)
 
-      // Logout — button label is "Sign Out"
-      await page.getByRole('button', { name: /sign out|log out|logout/i }).click()
+      await clickLogout(page)
       await page.waitForURL('/')
 
       // Now try to access dashboard
