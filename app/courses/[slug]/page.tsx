@@ -1,6 +1,7 @@
 import React from "react";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
 import CourseDetailClient from "./CourseDetailClient";
 
 export const revalidate = 60;
@@ -57,5 +58,21 @@ export default async function CourseDetailPage({ params }: Props) {
     notFound();
   }
 
-  return <CourseDetailClient course={course} />;
+  // Check if the current user is enrolled
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  let enrollmentStatus: "ACTIVE" | "COMPLETED" | null = null;
+  if (user) {
+    const enrollment = await prisma.enrollment.findFirst({
+      where: {
+        userId: user.id,
+        courseId: course.id,
+        status: { in: ["ACTIVE", "COMPLETED"] },
+      },
+      select: { status: true },
+    });
+    enrollmentStatus = (enrollment?.status as "ACTIVE" | "COMPLETED") ?? null;
+  }
+
+  return <CourseDetailClient course={course} enrollmentStatus={enrollmentStatus} />;
 }

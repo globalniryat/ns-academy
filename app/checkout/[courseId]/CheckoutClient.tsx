@@ -52,6 +52,7 @@ export default function CheckoutClient({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const isTestMode = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID?.startsWith("rzp_test_");
 
   const priceInRupees = Math.round(price / 100);
   const originalPriceInRupees = Math.round(originalPrice / 100);
@@ -137,8 +138,15 @@ export default function CheckoutClient({
       };
 
       const rzp = new window.Razorpay(options);
-      rzp.on("payment.failed", (response: { error: { description: string } }) => {
-        setError(response.error?.description || "Payment failed. Please try again.");
+      rzp.on("payment.failed", (response: { error: { description: string; reason?: string } }) => {
+        const reason = response.error?.reason;
+        let msg = response.error?.description || "Payment failed. Please try again.";
+        if (reason === "international_card_not_supported") {
+          msg = "International cards are not supported. Please use an Indian debit/credit card or UPI.";
+        } else if (reason === "payment_cancelled") {
+          msg = "Payment was cancelled. Please try again.";
+        }
+        setError(msg);
         setLoading(false);
       });
       rzp.open();
@@ -228,6 +236,13 @@ export default function CheckoutClient({
                 <Lock className="w-4 h-4" />
                 Pay ₹{priceInRupees.toLocaleString("en-IN")} — Get Instant Access
               </Button>
+
+              {/* Test mode notice */}
+              {isTestMode && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-800">
+                  <strong>Test mode:</strong> Use card <code className="bg-amber-100 px-1 rounded">4111 1111 1111 1111</code>, any future expiry, CVV <code className="bg-amber-100 px-1 rounded">123</code>. No real charge.
+                </div>
+              )}
 
               {/* Trust signals */}
               <div className="flex flex-wrap items-center justify-center gap-5 text-xs text-muted">

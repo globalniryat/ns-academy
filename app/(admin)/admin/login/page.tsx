@@ -45,6 +45,7 @@ export default function AdminLoginPage() {
       return;
     }
 
+    // Keep loader visible during navigation (no setLoading(false) here)
     router.push("/admin");
     router.refresh();
   };

@@ -83,10 +83,19 @@ function getYouTubeId(url: string | null): string | null {
   return m ? m[1] : url.length === 11 ? url : null; // fallback: bare ID
 }
 
-export default function CourseDetailClient({ course }: { course: Course }) {
+export default function CourseDetailClient({
+  course,
+  enrollmentStatus = null,
+}: {
+  course: Course;
+  enrollmentStatus?: "ACTIVE" | "COMPLETED" | null;
+}) {
   const [openSection, setOpenSection] = useState<number | null>(0);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [enrollLoading, setEnrollLoading] = useState(false);
   const router = useRouter();
+
+  const isEnrolled = !!enrollmentStatus;
 
   useEffect(() => {
     const supabase = createClient();
@@ -106,7 +115,10 @@ export default function CourseDetailClient({ course }: { course: Course }) {
   const totalLessons = course.sections.reduce((sum, s) => sum + s.lessons.length, 0);
 
   const handleEnroll = () => {
-    if (!isLoggedIn) {
+    setEnrollLoading(true);
+    if (isEnrolled) {
+      router.push(`/dashboard/${course.id}`);
+    } else if (!isLoggedIn) {
       router.push(`/login?redirect=/checkout/${course.id}`);
     } else {
       router.push(`/checkout/${course.id}`);
@@ -222,7 +234,7 @@ export default function CourseDetailClient({ course }: { course: Course }) {
                               className="flex items-center gap-3 px-5 py-3.5 hover:bg-offwhite border-b border-gray-50 last:border-0 transition-colors"
                             >
                               <div className="flex-shrink-0">
-                                {lesson.isFreePreview ? (
+                                {lesson.isFreePreview || isEnrolled ? (
                                   <PlayCircle className="w-4 h-4 text-green-500" />
                                 ) : (
                                   <Lock className="w-4 h-4 text-muted" />
@@ -230,7 +242,7 @@ export default function CourseDetailClient({ course }: { course: Course }) {
                               </div>
                               <span
                                 className={`text-sm flex-1 ${
-                                  lesson.isFreePreview ? "text-bodytext" : "text-muted"
+                                  lesson.isFreePreview || isEnrolled ? "text-bodytext" : "text-muted"
                                 }`}
                               >
                                 {lesson.title}
@@ -352,8 +364,14 @@ export default function CourseDetailClient({ course }: { course: Course }) {
                   className="w-full mb-3 text-base h-12"
                   id="course-enroll-btn"
                   onClick={handleEnroll}
+                  loading={enrollLoading}
+                  loadingText="Please wait…"
                 >
-                  Enroll Now
+                  {enrollmentStatus === "COMPLETED"
+                    ? "Review Course"
+                    : isEnrolled
+                    ? "Continue Learning"
+                    : "Enroll Now"}
                 </Button>
 
                 <p className="text-center text-muted text-xs mb-5">
@@ -388,8 +406,14 @@ export default function CourseDetailClient({ course }: { course: Course }) {
           className="flex-1 h-12"
           id="course-enroll-mobile"
           onClick={handleEnroll}
+          loading={enrollLoading}
+          loadingText="Please wait…"
         >
-          Enroll Now
+          {enrollmentStatus === "COMPLETED"
+            ? "Review Course"
+            : isEnrolled
+            ? "Continue Learning"
+            : "Enroll Now"}
         </Button>
       </div>
     </div>
