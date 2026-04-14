@@ -16,12 +16,14 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://checkout.razorpay.com`,
-              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+              // Razorpay needs checkout.razorpay.com + cdn.razorpay.com + checkout-static-next.razorpay.com
+              `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://checkout.razorpay.com https://cdn.razorpay.com https://checkout-static-next.razorpay.com`,
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://checkout.razorpay.com",
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: blob: https:",
-              "frame-src https://www.youtube-nocookie.com https://www.youtube.com https://api.razorpay.com",
-              "connect-src 'self' https://*.supabase.co https://api.razorpay.com https://lumberjack.razorpay.com",
+              "frame-src https://www.youtube-nocookie.com https://www.youtube.com https://api.razorpay.com https://checkout.razorpay.com",
+              // Razorpay needs api.razorpay.com + lumberjack + analytics
+              "connect-src 'self' https://*.supabase.co https://api.razorpay.com https://lumberjack.razorpay.com https://checkout-static-next.razorpay.com https://cdn.razorpay.com",
               "worker-src blob:",
               "object-src 'none'",
               "base-uri 'self'",
@@ -46,7 +48,7 @@ const nextConfig: NextConfig = {
           // ── Browser feature policy ─────────────────────────────────────────
           {
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=(), payment=(self https://checkout.razorpay.com)",
+            value: "camera=(), microphone=(), geolocation=(), accelerometer=*, gyroscope=*, payment=(self https://checkout.razorpay.com)",
           },
           // ── Force HTTPS (applied by CDN/Vercel in production too) ──────────
           {
