@@ -161,7 +161,26 @@ export default function CoursePlayerClient({
     setActiveLessonIdx(newIdx);
   }, []);
 
-  if (!activeLesson) return null;
+  if (!activeLesson) {
+    return (
+      <div className="min-h-screen bg-navy pt-16 flex items-center justify-center">
+        <div className="text-center px-4">
+          <PlayCircle className="w-16 h-16 text-white/20 mx-auto mb-4" />
+          <h2 className="font-heading text-xl font-bold text-white mb-2">No lessons yet</h2>
+          <p className="text-white/50 text-sm mb-6">
+            This course doesn&apos;t have any lessons added yet. Check back soon!
+          </p>
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-2 text-sm text-blue hover:text-white transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Dashboard
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   const videoId = extractYoutubeId(activeLesson.videoUrl);
   const videoEmbedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1`;
