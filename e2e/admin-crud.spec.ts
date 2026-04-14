@@ -328,11 +328,9 @@ test.describe('Admin Enrollments', () => {
   })
 
   test('manual enroll form is visible on the page', async ({ page }) => {
-    // The enrollments page should at minimum show the table; a manual enroll UI is optional
-    const hasForm = await page.getByRole('button', { name: /enroll|add enrollment/i }).isVisible().catch(() => false)
-    const hasSection = await page.getByText(/manual enroll|add enrollment/i).isVisible().catch(() => false)
-    const hasTable = await page.getByRole('table').isVisible().catch(() => false)
-    expect(hasForm || hasSection || hasTable).toBe(true)
+    // No manual-enroll UI exists yet; verify the page loaded by checking the table
+    // Use toBeVisible (retrying) not isVisible() (single-shot) — page may still be streaming
+    await expect(page.getByRole('table')).toBeVisible({ timeout: 15_000 })
   })
 
   test('manual enroll shows validation when fields are empty', async ({ page }) => {
@@ -439,19 +437,11 @@ test.describe('Admin FAQs', () => {
     await page.getByRole('button', { name: /add faq/i }).click()
     await expect(page.getByText(uniqueQ)).toBeVisible({ timeout: 5_000 })
 
-    // Find delete button for this FAQ row
+    // Find delete button for this FAQ row — delete is icon-only (Trash2), no accessible name
+    // Buttons order: 0=question, 1=edit, 2=toggle, 3=delete, 4=chevron
     const faqRow = page.locator('[class*="rounded"]').filter({ hasText: uniqueQ }).first()
-    const deleteBtn = faqRow.getByRole('button', { name: /delete/i })
-    const hasDelete = await deleteBtn.isVisible().catch(() => false)
-
-    if (!hasDelete) {
-      // Click the row to expand, then try deleting
-      await faqRow.getByRole('button').last().click()
-    }
-
-    // Accept confirm dialog if shown
     page.on('dialog', dialog => dialog.accept())
-    await faqRow.getByRole('button', { name: /delete/i }).click()
+    await faqRow.getByRole('button').nth(3).click()
 
     await expect(page.getByText(uniqueQ)).not.toBeVisible({ timeout: 5_000 })
   })
@@ -500,10 +490,11 @@ test.describe('Admin Testimonials', () => {
     await page.getByRole('button', { name: /add testimonial/i }).click()
     await expect(page.getByText(uniqueName)).toBeVisible({ timeout: 5_000 })
 
-    // Delete — accept confirm dialog
+    // Delete — icon-only Trash2 button (no accessible name); it's the last button in the row
+    // Buttons order: 0=toggle (Eye/EyeOff), 1=delete (Trash2)
     page.on('dialog', dialog => dialog.accept())
     const testimonialRow = page.locator('[class*="border"]').filter({ hasText: uniqueName }).first()
-    await testimonialRow.getByRole('button', { name: /delete/i }).click()
+    await testimonialRow.getByRole('button').last().click()
 
     await expect(page.getByText(uniqueName)).not.toBeVisible({ timeout: 5_000 })
   })
@@ -547,9 +538,10 @@ test.describe('Admin Site Content', () => {
     await firstInput.fill(newValue)
     await page.getByRole('button', { name: /save all/i }).first().click()
 
-    // Should show success feedback (toast, message, or button changes)
+    // Should show success feedback — use specific banner text to avoid strict-mode on
+    // multiple "Saved!" elements (header button + sticky button + success banner = 3 matches)
     await expect(
-      page.getByText(/saved|success|updated/i)
+      page.getByText(/all changes saved/i)
     ).toBeVisible({ timeout: 10_000 })
 
     // Restore original value
