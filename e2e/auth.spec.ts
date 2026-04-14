@@ -131,8 +131,8 @@ test.describe('Authentication', () => {
     })
 
     test('submit button shows Create Account label', async ({ page }) => {
-      // Registration form has a single password field (no confirm password)
-      await expect(page.getByRole('button', { name: /create account|register|sign up/i })).toBeVisible()
+      // Registration form submit button — use exact name to avoid matching "Sign up with Google"
+      await expect(page.getByRole('button', { name: 'Create Account' })).toBeVisible()
     })
   })
 })
