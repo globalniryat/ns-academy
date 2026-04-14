@@ -93,8 +93,8 @@ test.describe('Admin Dashboard', () => {
   test('shows all four stat cards', async ({ page }) => {
     await expect(page.getByText(/total students/i)).toBeVisible()
     await expect(page.getByText(/courses/i).first()).toBeVisible()
-    await expect(page.getByText(/enrollments/i)).toBeVisible()
-    await expect(page.getByText(/revenue/i)).toBeVisible()
+    await expect(page.getByText(/enrollments/i).first()).toBeVisible()
+    await expect(page.getByText(/revenue/i).first()).toBeVisible()
   })
 
   test('shows revenue chart (7-day bar chart)', async ({ page }) => {
@@ -116,7 +116,7 @@ test.describe('Admin Dashboard', () => {
     await page.goBack()
 
     // Click Payments quick action
-    await page.getByRole('link', { name: /payments/i }).click()
+    await page.getByRole('main').getByRole('link', { name: /payments/i }).first().click()
     await expect(page).toHaveURL(/admin\/payments/)
   })
 
@@ -165,18 +165,18 @@ test.describe('Admin Courses', () => {
 
   test('create course form has all required fields', async ({ page }) => {
     await page.goto('/admin/courses/new')
-    await expect(page.getByLabel(/course title/i)).toBeVisible()
-    await expect(page.getByLabel(/slug/i)).toBeVisible()
-    await expect(page.getByLabel(/short description/i)).toBeVisible()
-    await expect(page.getByLabel(/full description/i)).toBeVisible()
-    await expect(page.getByLabel(/price/i).first()).toBeVisible()
-    await expect(page.getByLabel(/duration/i)).toBeVisible()
+    await expect(page.getByText('Course Title *')).toBeVisible()
+    await expect(page.getByText('Slug *')).toBeVisible()
+    await expect(page.getByText('Short Description *')).toBeVisible()
+    await expect(page.getByText('Full Description *')).toBeVisible()
+    await expect(page.getByText('Price (₹) *')).toBeVisible()
+    await expect(page.getByText('Duration *')).toBeVisible()
   })
 
   test('create course form shows validation error for missing required fields', async ({ page }) => {
     await page.goto('/admin/courses/new')
     // Submit with only a title — missing description, price, etc.
-    await page.getByLabel(/course title/i).fill('AB') // too short
+    await page.getByPlaceholder(/CA Final SFM/i).fill('AB') // too short
     await page.getByRole('button', { name: /create course/i }).click()
     // Should still be on the same page (form prevented submission or showed error)
     await expect(page).toHaveURL(/admin\/courses\/new/)
@@ -185,18 +185,18 @@ test.describe('Admin Courses', () => {
   test('creates a new course and it appears in the courses list', async ({ page }) => {
     await page.goto('/admin/courses/new')
 
-    await page.getByLabel(/course title/i).fill(TEST_COURSE_TITLE)
+    await page.getByPlaceholder(/CA Final SFM/i).fill(TEST_COURSE_TITLE)
     // Slug is auto-filled from title
-    await page.getByLabel(/short description/i).fill('A short test description for the E2E test course')
-    await page.getByLabel(/full description/i).fill('A comprehensive test description that is long enough to pass validation for e2e testing purposes')
-    await page.getByLabel(/duration/i).fill('10 hours')
+    await page.getByPlaceholder(/One-line description/i).fill('A short test description for the E2E test course')
+    await page.getByPlaceholder(/Detailed course description/i).fill('A comprehensive test description that is long enough to pass validation for e2e testing purposes')
+    await page.getByPlaceholder(/120\+ hours/i).fill('10 hours')
 
     // Level
-    await page.getByLabel(/level/i).selectOption('FINAL')
+    await page.locator('select').first().selectOption('FINAL')
 
     // Price fields
-    await page.getByLabel(/^price/i).fill('4999')
-    await page.getByLabel(/original price/i).fill('9999')
+    await page.getByPlaceholder(/^e\.g\. 4999/).fill('4999')
+    await page.getByPlaceholder(/^e\.g\. 9999/).fill('9999')
 
     // What you'll learn (first input)
     await page.getByPlaceholder(/master sfm|e\.g\. master/i).first().fill('Learn E2E testing concepts')
@@ -217,7 +217,7 @@ test.describe('Admin Courses', () => {
     await expect(page).toHaveURL(/admin\/courses\/.*\/edit/)
 
     // Change title
-    const titleInput = page.getByLabel(/course title/i)
+    const titleInput = page.getByPlaceholder(/CA Final SFM/i)
     const originalTitle = await titleInput.inputValue()
     const updatedTitle = `${originalTitle} [Updated]`
 
@@ -230,8 +230,8 @@ test.describe('Admin Courses', () => {
 
     // Restore title for test isolation
     await page.getByRole('link', { name: /edit/i }).first().click()
-    await page.getByLabel(/course title/i).clear()
-    await page.getByLabel(/course title/i).fill(originalTitle)
+    await page.getByPlaceholder(/CA Final SFM/i).clear()
+    await page.getByPlaceholder(/CA Final SFM/i).fill(originalTitle)
     await page.getByRole('button', { name: /save changes/i }).click()
   })
 
@@ -248,7 +248,7 @@ test.describe('Admin Courses', () => {
     await expect(page).toHaveURL(/admin\/courses\/.*\/edit/)
 
     // Change status to PUBLISHED
-    await page.getByLabel(/status/i).selectOption('PUBLISHED')
+    await page.locator('select').nth(1).selectOption('PUBLISHED')
     await page.getByRole('button', { name: /save changes/i }).click()
     await expect(page).toHaveURL(/admin\/courses(?!\/)/, { timeout: 15_000 })
   })
@@ -281,43 +281,27 @@ test.describe('Admin Students', () => {
       test.skip() // No students seeded
       return
     }
-    await expect(page.getByText(/name/i)).toBeVisible()
-    await expect(page.getByText(/email/i)).toBeVisible()
+    await expect(page.getByText('Student').first()).toBeVisible()
+    await expect(page.getByText('Phone').first()).toBeVisible()
   })
 
   test('clicking a student row navigates to student detail page', async ({ page }) => {
-    const rows = page.getByRole('link', { name: /view|detail/i })
-    const count = await rows.count()
-    if (count === 0) {
-      // Try clicking table row directly
-      const tableRows = page.getByRole('row').nth(1) // first data row
-      const rowExists = await tableRows.isVisible().catch(() => false)
-      if (!rowExists) {
-        test.skip()
-        return
-      }
-      await tableRows.click()
-    } else {
-      await rows.first().click()
+    const viewLink = page.getByRole('link', { name: 'View →' }).first()
+    const hasLink = await viewLink.isVisible().catch(() => false)
+    if (!hasLink) {
+      test.skip()
+      return
     }
+    await viewLink.click()
     await expect(page).toHaveURL(/admin\/students\//)
   })
 
   test('student detail page shows enrollments, payments, certificates sections', async ({ page }) => {
-    // Navigate to first student
-    const detailLink = page.getByRole('link').filter({ hasText: /view|detail/i }).first()
-    const hasLink = await detailLink.isVisible().catch(() => false)
+    const viewLink = page.getByRole('link', { name: 'View →' }).first()
+    const hasLink = await viewLink.isVisible().catch(() => false)
+    if (!hasLink) { test.skip(); return }
 
-    if (!hasLink) {
-      // Try navigating via row click
-      const firstRow = page.getByRole('row').nth(1)
-      const rowVisible = await firstRow.isVisible().catch(() => false)
-      if (!rowVisible) { test.skip(); return }
-      await firstRow.click()
-    } else {
-      await detailLink.click()
-    }
-
+    await viewLink.click()
     await expect(page).toHaveURL(/admin\/students\//, { timeout: 10_000 })
     // Should show student info sections
     await expect(page.getByText(/enrollment|course/i).first()).toBeVisible()
@@ -335,13 +319,12 @@ test.describe('Admin Enrollments', () => {
   })
 
   test('shows enrollments page heading', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: /enrollments/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /enrollments/i }).first()).toBeVisible()
   })
 
   test('shows enrollment table or empty state', async ({ page }) => {
-    const hasTable = await page.getByRole('table').isVisible().catch(() => false)
-    const hasEmpty = await page.getByText(/no enrollment/i).isVisible().catch(() => false)
-    expect(hasTable || hasEmpty).toBe(true)
+    // EnrollmentsTable always renders a <table> regardless of data
+    await expect(page.getByRole('table')).toBeVisible({ timeout: 10_000 })
   })
 
   test('manual enroll form is visible on the page', async ({ page }) => {

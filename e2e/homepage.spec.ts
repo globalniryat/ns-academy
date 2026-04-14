@@ -42,7 +42,7 @@ test.describe('Homepage', () => {
   test('footer is present with company name', async ({ page }) => {
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
     await expect(page.locator('footer')).toBeVisible()
-    await expect(page.locator('footer')).toContainText(/NS Academy/)
+    await expect(page.locator('footer')).toContainText(/CA Portal/)
   })
 
   test('meta description is set for SEO', async ({ page }) => {

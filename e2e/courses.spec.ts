@@ -71,7 +71,7 @@ test.describe('Course detail page (/courses/:slug)', () => {
 test.describe('Certificate verification (/verify/:certificateNo)', () => {
   test('shows invalid certificate message for made-up cert number', async ({ page }) => {
     await page.goto('/verify/NSA-0000-FAKE99')
-    await expect(page.getByText(/invalid|not found/i)).toBeVisible()
+    await expect(page.getByText(/invalid|not found/i).first()).toBeVisible()
   })
 
   test('page loads without error', async ({ page }) => {

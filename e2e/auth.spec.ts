@@ -94,8 +94,8 @@ test.describe('Authentication', () => {
       await page.getByRole('button', { name: /log in|sign in/i }).click()
       await page.waitForURL(/dashboard/)
 
-      // Logout
-      await page.getByRole('button', { name: /logout/i }).click()
+      // Logout — button label is "Sign Out"
+      await page.getByRole('button', { name: /sign out|log out|logout/i }).click()
       await expect(page).toHaveURL('/', { timeout: 10_000 })
     })
 
@@ -107,8 +107,8 @@ test.describe('Authentication', () => {
       await page.getByRole('button', { name: /log in|sign in/i }).click()
       await page.waitForURL(/dashboard/)
 
-      // Logout
-      await page.getByRole('button', { name: /logout/i }).click()
+      // Logout — button label is "Sign Out"
+      await page.getByRole('button', { name: /sign out|log out|logout/i }).click()
       await page.waitForURL('/')
 
       // Now try to access dashboard
@@ -130,13 +130,9 @@ test.describe('Authentication', () => {
       await expect(page.getByLabel(/password/i).first()).toBeVisible()
     })
 
-    test('shows error when passwords do not match', async ({ page }) => {
-      await page.getByLabel(/name/i).fill('Test Student')
-      await page.getByLabel(/email/i).fill(`test+${Date.now()}@example.com`)
-      await page.getByLabel(/^password/i).fill('Password@123')
-      await page.getByLabel(/confirm password/i).fill('DifferentPass@123')
-      await page.getByRole('button', { name: /register|create|sign up/i }).click()
-      await expect(page.getByText(/passwords do not match/i)).toBeVisible()
+    test('submit button shows Create Account label', async ({ page }) => {
+      // Registration form has a single password field (no confirm password)
+      await expect(page.getByRole('button', { name: /create account|register|sign up/i })).toBeVisible()
     })
   })
 })

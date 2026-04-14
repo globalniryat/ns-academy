@@ -46,9 +46,9 @@ test.describe('Admin Dashboard', () => {
   })
 
   test('shows stats cards (students, courses, revenue)', async ({ page }) => {
-    await expect(page.getByText(/students/i)).toBeVisible()
-    await expect(page.getByText(/course/i)).toBeVisible()
-    await expect(page.getByText(/revenue/i)).toBeVisible()
+    await expect(page.getByText(/students/i).first()).toBeVisible()
+    await expect(page.getByText(/course/i).first()).toBeVisible()
+    await expect(page.getByText(/revenue/i).first()).toBeVisible()
   })
 
   test('shows recent enrollments table', async ({ page }) => {
@@ -56,9 +56,9 @@ test.describe('Admin Dashboard', () => {
   })
 
   test('sidebar navigation links are present', async ({ page }) => {
-    await expect(page.getByRole('link', { name: /courses/i })).toBeVisible()
-    await expect(page.getByRole('link', { name: /students/i })).toBeVisible()
-    await expect(page.getByRole('link', { name: /payments/i })).toBeVisible()
+    await expect(page.getByRole('link', { name: /courses/i }).first()).toBeVisible()
+    await expect(page.getByRole('link', { name: /students/i }).first()).toBeVisible()
+    await expect(page.getByRole('link', { name: /payments/i }).first()).toBeVisible()
   })
 })
 
@@ -89,8 +89,8 @@ test.describe('Admin — Testimonials', () => {
   })
 
   test('Add Testimonial form is present', async ({ page }) => {
-    await expect(page.getByLabel(/name/i)).toBeVisible()
-    await expect(page.getByLabel(/quote/i)).toBeVisible()
+    await expect(page.getByPlaceholder(/student name/i)).toBeVisible()
+    await expect(page.getByPlaceholder(/what the student said/i)).toBeVisible()
     await expect(page.getByRole('button', { name: /add testimonial/i })).toBeVisible()
   })
 
@@ -125,11 +125,11 @@ test.describe('Admin — Site Content', () => {
 
   test('shows editable content fields', async ({ page }) => {
     // Should load Hero, Stats, Instructor groups
-    await expect(page.getByText(/hero/i)).toBeVisible()
-    await expect(page.getByText(/stats/i)).toBeVisible()
+    await expect(page.getByText(/hero/i).first()).toBeVisible()
+    await expect(page.getByText(/stats/i).first()).toBeVisible()
   })
 
   test('"Save All" button is present', async ({ page }) => {
-    await expect(page.getByRole('button', { name: /save all/i })).toBeVisible()
+    await expect(page.getByRole('button', { name: /save all/i }).first()).toBeVisible()
   })
 })
