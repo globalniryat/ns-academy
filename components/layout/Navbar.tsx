@@ -206,6 +206,7 @@ export default function Navbar() {
                   onClick={handleLogout}
                   className="text-muted hover:text-red-500 transition-colors"
                   title="Sign out"
+                  aria-label="Logout"
                 >
                   <LogOut className="w-4 h-4" />
                 </button>
