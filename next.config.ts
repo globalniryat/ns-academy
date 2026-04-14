@@ -48,7 +48,7 @@ const nextConfig: NextConfig = {
           // ── Browser feature policy ─────────────────────────────────────────
           {
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=(), accelerometer=*, gyroscope=*, payment=(self https://checkout.razorpay.com)",
+            value: "camera=(), microphone=(), geolocation=(), accelerometer=(self \"https://checkout.razorpay.com\"), gyroscope=(self \"https://checkout.razorpay.com\"), payment=(self \"https://checkout.razorpay.com\")",
           },
           // ── Force HTTPS (applied by CDN/Vercel in production too) ──────────
           {
