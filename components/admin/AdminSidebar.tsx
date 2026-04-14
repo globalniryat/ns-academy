@@ -105,8 +105,8 @@ export default function AdminSidebar() {
 
   return (
     <>
-      {/* Desktop sidebar */}
-      <aside className="hidden lg:flex w-60 min-h-screen bg-navy flex-col shrink-0 border-r border-white/5">
+      {/* Desktop sidebar — sticky so logo + logout are always visible */}
+      <aside className="hidden lg:flex w-60 h-screen sticky top-0 bg-navy flex-col shrink-0 border-r border-white/5 overflow-hidden">
         <SidebarContent />
       </aside>
 
