@@ -27,18 +27,25 @@ function LoginForm() {
     setLoading(true);
 
     const supabase = createClient();
-    const { error: authError } = await supabase.auth.signInWithPassword({
+    const { data, error: authError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    setLoading(false);
-
     if (authError) {
       setError(authError.message || "Invalid email or password");
+      setLoading(false);
       return;
     }
 
+    // Redirect admin users to the admin panel instead of student dashboard
+    if (data.user?.user_metadata?.role === "ADMIN") {
+      router.push("/admin");
+      router.refresh();
+      return;
+    }
+
+    // Keep loader visible during navigation (no setLoading(false) here)
     router.push(redirect);
     router.refresh();
   };

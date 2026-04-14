@@ -13,6 +13,7 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [activeSection, setActiveSection] = useState<string>("");
+  const [dashboardLoading, setDashboardLoading] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -39,6 +40,7 @@ export default function Navbar() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsOpen(false);
+    setDashboardLoading(false);
   }, [pathname]);
 
   useEffect(() => {
@@ -189,13 +191,14 @@ export default function Navbar() {
           <div className="hidden md:flex items-center gap-3">
             {user ? (
               <div className="flex items-center gap-3">
-                <Link
-                  href="/dashboard"
+                <button
+                  onClick={() => { setDashboardLoading(true); router.push("/dashboard"); }}
                   className="flex items-center gap-1.5 text-sm font-medium text-blue hover:text-primary-dark transition-colors"
+                  disabled={dashboardLoading}
                 >
-                  <LayoutDashboard className="w-4 h-4" />
-                  Dashboard
-                </Link>
+                  <LayoutDashboard className={`w-4 h-4 ${dashboardLoading ? "animate-spin opacity-60" : ""}`} />
+                  {dashboardLoading ? "Loading…" : "My Learning"}
+                </button>
                 <div className="w-8 h-8 bg-blue rounded-full flex items-center justify-center text-white text-xs font-bold">
                   {initials}
                 </div>
@@ -294,7 +297,7 @@ export default function Navbar() {
                   <Link href="/dashboard" className="block">
                     <button className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-sm font-medium text-bodytext hover:bg-offwhite transition-colors">
                       <User className="w-4 h-4" />
-                      My Dashboard
+                      My Learning
                     </button>
                   </Link>
                   <button

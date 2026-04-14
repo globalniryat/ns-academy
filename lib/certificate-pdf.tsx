@@ -218,7 +218,7 @@ export function CertificatePDFDocument({
               <View style={styles.cTL} /><View style={styles.cTR} />
               <View style={styles.cBL} /><View style={styles.cBR} />
               <View style={styles.headerDot} />
-              <Text style={styles.headerName}>NS  Academy</Text>
+              <Text style={styles.headerName}>NS Academy</Text>
               <Text style={styles.headerTagline}>Powered by CA Nikesh Shah</Text>
             </View>
 

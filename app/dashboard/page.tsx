@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
-import { LogoutButton } from "./DashboardClient";
 
 // ── Types ──────────────────────────────────────────────────────────────
 type LevelVariant = "foundation" | "intermediate" | "final";
@@ -137,7 +136,6 @@ export default async function DashboardPage() {
                 <h1 className="font-heading text-2xl font-bold text-white">{displayName}</h1>
               </div>
             </div>
-            <LogoutButton />
           </div>
 
           {/* Stat cards */}
