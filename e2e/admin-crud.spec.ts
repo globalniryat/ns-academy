@@ -359,9 +359,11 @@ test.describe('Admin Payments', () => {
   })
 
   test('shows payment records table or empty state', async ({ page }) => {
-    const hasTable = await page.getByRole('table').isVisible().catch(() => false)
-    const hasEmpty = await page.getByText(/no payment|no transaction/i).isVisible().catch(() => false)
-    expect(hasTable || hasEmpty).toBe(true)
+    // Use a retrying locator so we wait for the page to finish loading
+    // before asserting — avoids a flaky snapshot race on slow CI.
+    await expect(
+      page.getByRole('table').or(page.getByText(/no payment|no transaction/i))
+    ).toBeVisible({ timeout: 15_000 })
   })
 
   test('payment table has Amount, Status, Student columns when data exists', async ({ page }) => {

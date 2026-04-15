@@ -42,7 +42,13 @@ export default defineConfig({
     },
     {
       name: 'mobile',
-      use: { ...devices['iPhone 14'] },
+      use: {
+        // Keep iPhone 14 viewport/touch/UA, but run on Chromium.
+        // WebKit requires system libraries that are not cached in CI and
+        // cause immediate browser-launch failures (exit 127) on cache hits.
+        ...devices['iPhone 14'],
+        browserName: 'chromium',
+      },
       // Only run auth + homepage on mobile to keep suite fast
       testMatch: ['**/auth.spec.ts', '**/homepage.spec.ts'],
     },

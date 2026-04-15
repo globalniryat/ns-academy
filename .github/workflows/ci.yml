@@ -90,7 +90,7 @@ jobs:
         id: playwright-cache
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-chromium-webkit-${{ hashFiles('package-lock.json') }}
+          key: playwright-chromium-${{ hashFiles('package-lock.json') }}
 
       - name: Install dependencies
         run: npm ci
@@ -98,9 +98,15 @@ jobs:
       - name: Generate Prisma client
         run: npx prisma generate
 
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium webkit
+      - name: Install Playwright browsers (first run)
+        run: npx playwright install --with-deps chromium
         if: steps.playwright-cache.outputs.cache-hit != 'true'
+
+      - name: Install Playwright system deps (cached run)
+        # Chromium system libraries are OS packages — not cached — so we must
+        # install them on every run even when the browser binary is cached.
+        run: npx playwright install-deps chromium
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
 
       - name: Seed test data
         run: npm run db:seed:test
