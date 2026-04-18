@@ -306,6 +306,50 @@ test.describe('Admin Students', () => {
     // Should show student info sections
     await expect(page.getByText(/enrollment|course/i).first()).toBeVisible()
   })
+
+  test('student detail page shows Delete User button', async ({ page }) => {
+    // Navigate to any student detail page
+    const firstRow = page.getByRole('row').nth(1)
+    const rowVisible = await firstRow.isVisible().catch(() => false)
+    if (!rowVisible) { test.skip(); return }
+
+    // Find a link to a student detail page
+    const studentLink = page.getByRole('link').filter({ hasText: /view|manage/i }).first()
+    const hasLink = await studentLink.isVisible().catch(() => false)
+    if (!hasLink) {
+      // Try row click to navigate to student detail
+      await firstRow.click()
+    } else {
+      await studentLink.click()
+    }
+
+    await expect(page).toHaveURL(/admin\/students\/[^/]+$/, { timeout: 10_000 })
+    // Delete User button must be present
+    await expect(page.getByRole('button', { name: /delete user/i })).toBeVisible()
+  })
+
+  test('Delete User button opens confirmation dialog', async ({ page }) => {
+    const firstRow = page.getByRole('row').nth(1)
+    const rowVisible = await firstRow.isVisible().catch(() => false)
+    if (!rowVisible) { test.skip(); return }
+
+    const studentLink = page.getByRole('link').filter({ hasText: /view|manage/i }).first()
+    const hasLink = await studentLink.isVisible().catch(() => false)
+    if (!hasLink) { await firstRow.click() } else { await studentLink.click() }
+
+    await expect(page).toHaveURL(/admin\/students\/[^/]+$/, { timeout: 10_000 })
+
+    await page.getByRole('button', { name: /delete user/i }).click()
+
+    // Confirmation dialog should appear
+    await expect(page.getByText(/this will permanently delete/i)).toBeVisible({ timeout: 5_000 })
+    await expect(page.getByRole('button', { name: /yes, delete/i })).toBeVisible()
+    await expect(page.getByRole('button', { name: /cancel/i })).toBeVisible()
+
+    // Cancel closes the dialog
+    await page.getByRole('button', { name: /cancel/i }).click()
+    await expect(page.getByText(/this will permanently delete/i)).not.toBeVisible()
+  })
 })
 
 // ─────────────────────────────────────────────────────────────────────────────

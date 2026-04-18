@@ -1,23 +1,42 @@
 "use client";
 
-import React, { useEffect, Suspense } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { CheckCircle, PlayCircle, LayoutDashboard, ArrowRight, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 
 function PaymentSuccessContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const courseId = searchParams?.get("course") || "";
   const courseTitle = searchParams?.get("title")
     ? decodeURIComponent(searchParams.get("title")!)
     : "Your Course";
 
-  // Confetti-like animation using CSS
+  const [countdown, setCountdown] = useState(5);
+
   useEffect(() => {
     document.title = "Payment Successful — CA Portal";
   }, []);
+
+  // Tick countdown down every second
+  useEffect(() => {
+    if (!courseId) return;
+    const interval = setInterval(() => {
+      setCountdown((c) => (c <= 1 ? 0 : c - 1));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [courseId]);
+
+  // Navigate once countdown reaches zero (separate effect — never call
+  // router.push inside a state updater, it triggers a React warning)
+  useEffect(() => {
+    if (countdown === 0 && courseId) {
+      router.push(`/dashboard/${courseId}`);
+    }
+  }, [countdown, courseId, router]);
 
   return (
     <div className="min-h-screen bg-offwhite flex items-center justify-center px-4 py-16 pt-24">
@@ -87,17 +106,19 @@ function PaymentSuccessContent() {
 
             {/* CTAs */}
             <div className="flex flex-col gap-3">
-              <Link href={courseId ? `/dashboard/${courseId}` : "/dashboard"} className="block">
-                <Button
-                  variant="default"
-                  className="w-full h-12 gap-2 text-base"
-                  id="start-learning-btn"
-                >
-                  <PlayCircle className="w-5 h-5" />
-                  Start Learning Now
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
-              </Link>
+              <Button
+                variant="default"
+                className="w-full h-12 gap-2 text-base"
+                id="start-learning-btn"
+                onClick={() => router.push(courseId ? `/dashboard/${courseId}` : "/dashboard")}
+              >
+                <PlayCircle className="w-5 h-5" />
+                Start Learning Now
+                {courseId && (
+                  <span className="ml-auto text-sm opacity-80">({countdown}s)</span>
+                )}
+                <ArrowRight className="w-4 h-4" />
+              </Button>
               <Link href="/dashboard" className="block">
                 <Button variant="outline" className="w-full gap-2" id="go-dashboard-btn">
                   <LayoutDashboard className="w-4 h-4" />

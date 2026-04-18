@@ -8,6 +8,7 @@ import {
   ChevronDown, GraduationCap, ShieldCheck, Smartphone,
   Infinity, ArrowLeft, FileText,
 } from "lucide-react";
+import VideoPlayer from "@/components/VideoPlayer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
@@ -77,11 +78,6 @@ const includes = [
   { icon: GraduationCap, label: "Expert instructor" },
 ];
 
-function getYouTubeId(url: string | null): string | null {
-  if (!url) return null;
-  const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|v\/))([^&?/\s]{11})/);
-  return m ? m[1] : url.length === 11 ? url : null; // fallback: bare ID
-}
 
 export default function CourseDetailClient({
   course,
@@ -226,8 +222,6 @@ export default function CourseDetailClient({
                     {openSection === sIdx && (
                       <div className="border-t border-gray-100">
                         {section.lessons.map((lesson) => {
-                          const lessonYtId = getYouTubeId(lesson.videoUrl) ?? lesson.videoUrl;
-                          const videoUrl = `https://www.youtube-nocookie.com/embed/${lessonYtId}`;
                           return (
                             <div
                               key={lesson.id}
@@ -252,7 +246,7 @@ export default function CourseDetailClient({
                               )}
                               {lesson.isFreePreview && (
                                 <a
-                                  href={videoUrl}
+                                  href={lesson.videoUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="text-xs text-green-600 font-semibold bg-green-50 px-2.5 py-1 rounded-full hover:bg-green-100 transition-colors"
@@ -324,19 +318,13 @@ export default function CourseDetailClient({
           <div className="hidden lg:block">
             <div className="sticky top-24 bg-white rounded-2xl border border-gray-100 shadow-xl overflow-hidden">
               {/* Video preview */}
-              {course.freePreviewUrl && (() => {
-                const ytId = getYouTubeId(course.freePreviewUrl);
-                return ytId ? (
-                  <div className="video-container" style={{ borderRadius: 0 }}>
-                    <iframe
-                      src={`https://www.youtube-nocookie.com/embed/${ytId}?rel=0&modestbranding=1`}
-                      title="Free Preview"
-                      allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
-                  </div>
-                ) : null;
-              })()}
+              {course.freePreviewUrl && (
+                <VideoPlayer
+                  videoUrl={course.freePreviewUrl}
+                  title="Free Preview"
+                  className="video-container"
+                />
+              )}
 
               <div className="p-6">
                 {/* Price */}

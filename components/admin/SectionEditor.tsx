@@ -279,7 +279,7 @@ export default function SectionEditor({ courseId, initialSections }: Props) {
                       <Input
                         value={editingLesson.videoUrl}
                         onChange={(e) => setEditingLesson((p) => ({ ...p, videoUrl: e.target.value }))}
-                        placeholder="YouTube URL or video URL *"
+                        placeholder="YouTube or Bunny.net video URL *"
                         className="text-sm h-9 font-mono"
                       />
                       <div className="flex items-center gap-3">
@@ -378,7 +378,7 @@ export default function SectionEditor({ courseId, initialSections }: Props) {
                     autoFocus
                   />
                   <Input
-                    placeholder="YouTube URL or video URL *"
+                    placeholder="YouTube or Bunny.net video URL *"
                     value={newLesson.videoUrl}
                     onChange={(e) => setNewLesson((p) => ({ ...p, videoUrl: e.target.value }))}
                     className="text-sm h-9 font-mono"

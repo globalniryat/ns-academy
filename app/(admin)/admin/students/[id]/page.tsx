@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import StatusBadge, { toVariant } from "@/components/admin/StatusBadge";
 import StudentEnrollmentManager from "@/components/admin/StudentEnrollmentManager";
+import DeleteStudentButton from "@/components/admin/DeleteStudentButton";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -112,7 +113,10 @@ export default async function StudentDetailPage({ params }: Props) {
                   Joined {new Date(student.createdAt).toLocaleDateString("en-IN", { dateStyle: "long" })}
                 </p>
               </div>
-              <StatusBadge variant={student.isActive ? "active" : "expired"} label={student.isActive ? "Active" : "Inactive"} />
+              <div className="flex items-center gap-3">
+                <StatusBadge variant={student.isActive ? "active" : "expired"} label={student.isActive ? "Active" : "Inactive"} />
+                <DeleteStudentButton studentId={id} studentName={student.name} />
+              </div>
             </div>
           </div>
         </div>
