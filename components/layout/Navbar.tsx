@@ -2,35 +2,15 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
-import { Menu, X, BookOpen, LogOut, User, LayoutDashboard } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { usePathname } from "next/navigation";
+import { Menu, X, BookOpen } from "lucide-react";
 import EnrollButton from "@/components/ui/EnrollButton";
-import { createClient } from "@/lib/supabase/client";
-import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [user, setUser] = useState<SupabaseUser | null>(null);
   const [activeSection, setActiveSection] = useState<string>("");
-  const [dashboardLoading, setDashboardLoading] = useState(false);
-  const router = useRouter();
   const pathname = usePathname();
-
-  useEffect(() => {
-    const supabase = createClient();
-
-    supabase.auth.getUser().then(({ data }) => setUser(data.user));
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -41,7 +21,6 @@ export default function Navbar() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsOpen(false);
-    setDashboardLoading(false);
   }, [pathname]);
 
   useEffect(() => {
@@ -54,14 +33,11 @@ export default function Navbar() {
     const sectionIds = ["about", "testimonials", "faq"];
 
     const computeActive = () => {
-      // Offset: a section becomes active when its top is within 30% of viewport height from the top
       const threshold = window.scrollY + window.innerHeight * 0.3;
       let current = "";
       for (const id of sectionIds) {
         const el = document.getElementById(id);
-        if (el && el.offsetTop <= threshold) {
-          current = id;
-        }
+        if (el && el.offsetTop <= threshold) current = id;
       }
       setActiveSection(current);
     };
@@ -70,23 +46,6 @@ export default function Navbar() {
     window.addEventListener("scroll", computeActive, { passive: true });
     return () => window.removeEventListener("scroll", computeActive);
   }, [pathname]);
-
-  const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    setUser(null);
-    router.push("/");
-    router.refresh();
-  };
-
-  const displayName =
-    user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Student";
-  const initials = displayName
-    .split(" ")
-    .map((n: string) => n[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
 
   const navLinks = [
     { href: "/", label: "Home" },
@@ -99,13 +58,11 @@ export default function Navbar() {
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/" && activeSection === "";
     if (href.startsWith("/#")) {
-      const sectionId = href.slice(2);
-      return pathname === "/" && activeSection === sectionId;
+      return pathname === "/" && activeSection === href.slice(2);
     }
     return pathname.startsWith(href);
   };
 
-  // Only use transparent/dark style on homepage before scrolling
   const isHeroMode = pathname === "/" && !scrolled;
 
   return (
@@ -132,33 +89,21 @@ export default function Navbar() {
               />
             </div>
             <div className="flex flex-col leading-none">
-              <span
-                className={`font-bold text-base ${
-                  isHeroMode ? "text-white" : "text-navy"
-                }`}
-              >
+              <span className={`font-bold text-base ${isHeroMode ? "text-white" : "text-navy"}`}>
                 NS Academy
               </span>
-              <span
-                className={`text-[10px] font-medium ${
-                  isHeroMode ? "text-white/60" : "text-muted"
-                }`}
-              >
+              <span className={`text-[10px] font-medium ${isHeroMode ? "text-white/60" : "text-muted"}`}>
                 CA Nikesh Shah
               </span>
             </div>
           </Link>
 
-          {/* Desktop Nav Links + Courses pill */}
+          {/* Desktop Nav Links */}
           <div className="hidden md:flex items-center gap-6">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
-                href={
-                  link.href.startsWith("/#")
-                    ? { pathname: "/", hash: link.href.slice(2) }
-                    : link.href
-                }
+                href={link.href.startsWith("/#") ? { pathname: "/", hash: link.href.slice(2) } : link.href}
                 className={`text-sm font-medium transition-colors relative pb-0.5 ${
                   isActive(link.href)
                     ? isHeroMode
@@ -173,7 +118,7 @@ export default function Navbar() {
               </Link>
             ))}
 
-            {/* Courses — highlighted pill to draw attention */}
+            {/* Courses pill */}
             <Link
               href="/courses"
               className={`flex items-center gap-1.5 text-sm font-semibold px-3.5 py-1.5 rounded-full border transition-all duration-200 ${
@@ -189,55 +134,16 @@ export default function Navbar() {
             </Link>
           </div>
 
-          {/* Desktop Auth */}
+          {/* Desktop CTA */}
           <div className="hidden md:flex items-center gap-3">
-            {user ? (
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => { setDashboardLoading(true); router.push("/dashboard"); }}
-                  className="flex items-center gap-1.5 text-sm font-medium text-blue hover:text-primary-dark transition-colors"
-                  disabled={dashboardLoading}
-                >
-                  <LayoutDashboard className={`w-4 h-4 ${dashboardLoading ? "animate-spin opacity-60" : ""}`} />
-                  {dashboardLoading ? "Loading…" : "My Learning"}
-                </button>
-                <div className="w-8 h-8 bg-blue rounded-full flex items-center justify-center text-white text-xs font-bold">
-                  {initials}
-                </div>
-                <button
-                  onClick={handleLogout}
-                  className="text-muted hover:text-red-500 transition-colors"
-                  title="Sign out"
-                  aria-label="Logout"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              <>
-                <Link href="/login">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={
-                      isHeroMode ? "text-white hover:bg-white/10" : "text-bodytext"
-                    }
-                  >
-                    Login
-                  </Button>
-                </Link>
-                <EnrollButton variant="default" size="sm" className="gap-1.5">
-                  Enroll Now
-                </EnrollButton>
-              </>
-            )}
+            <EnrollButton variant="default" size="sm" className="gap-1.5">
+              Enroll Now
+            </EnrollButton>
           </div>
 
           {/* Mobile Hamburger */}
           <button
-            className={`md:hidden transition-colors ${
-              isHeroMode ? "text-white" : "text-navy"
-            }`}
+            className={`md:hidden transition-colors ${isHeroMode ? "text-white" : "text-navy"}`}
             onClick={() => setIsOpen(!isOpen)}
             aria-label="Toggle menu"
           >
@@ -253,11 +159,7 @@ export default function Navbar() {
             {navLinks.map((link) => (
               <Link
                 key={link.href}
-                href={
-                  link.href.startsWith("/#")
-                    ? { pathname: "/", hash: link.href.slice(2) }
-                    : link.href
-                }
+                href={link.href.startsWith("/#") ? { pathname: "/", hash: link.href.slice(2) } : link.href}
                 className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                   isActive(link.href)
                     ? "bg-blue/10 text-blue font-semibold"
@@ -281,46 +183,10 @@ export default function Navbar() {
               Courses
             </Link>
 
-            <div className="pt-3 border-t border-gray-100 space-y-2">
-              {user ? (
-                <>
-                  <div className="flex items-center gap-3 px-3 py-2.5">
-                    <div className="w-8 h-8 bg-blue rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                      {initials}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-navy">
-                        {displayName}
-                      </p>
-                      <p className="text-xs text-muted">{user.email}</p>
-                    </div>
-                  </div>
-                  <Link href="/dashboard" className="block">
-                    <button className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-sm font-medium text-bodytext hover:bg-offwhite transition-colors">
-                      <User className="w-4 h-4" />
-                      My Learning
-                    </button>
-                  </Link>
-                  <button
-                    onClick={handleLogout}
-                    className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 transition-colors"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    Sign Out
-                  </button>
-                </>
-              ) : (
-                <>
-                  <Link href="/login" className="block">
-                    <Button variant="outline" className="w-full">
-                      Login
-                    </Button>
-                  </Link>
-                  <EnrollButton variant="default" className="w-full gap-2">
-                    Enroll Now
-                  </EnrollButton>
-                </>
-              )}
+            <div className="pt-3 border-t border-gray-100">
+              <EnrollButton variant="default" className="w-full gap-2">
+                Enroll Now
+              </EnrollButton>
             </div>
           </div>
         </div>

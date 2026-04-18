@@ -1,5 +1,5 @@
 import React from "react";
-import { prisma } from "@/lib/prisma";
+import { STATIC_TESTIMONIALS, STATIC_FAQS } from "@/lib/static-data";
 import HeroSection from "@/components/home/HeroSection";
 import StatsBar from "@/components/home/StatsBar";
 import InstructorProfile from "@/components/home/InstructorProfile";
@@ -9,20 +9,7 @@ import Testimonials from "@/components/home/Testimonials";
 import CTABanner from "@/components/home/CTABanner";
 import FAQSection from "@/components/home/FAQSection";
 
-export const revalidate = 60; // ISR: revalidate every 60 seconds
-
-export default async function HomePage() {
-  const [testimonials, faqs] = await Promise.all([
-    prisma.testimonial.findMany({
-      where: { isActive: true },
-      orderBy: { sortOrder: "asc" },
-    }),
-    prisma.fAQ.findMany({
-      where: { isActive: true },
-      orderBy: { sortOrder: "asc" },
-    }),
-  ]);
-
+export default function HomePage() {
   return (
     <>
       <HeroSection />
@@ -30,8 +17,8 @@ export default async function HomePage() {
       <InstructorProfile />
       <FeaturedCourse />
       <WhyUs />
-      <Testimonials testimonials={testimonials} />
-      <FAQSection faqs={faqs} />
+      <Testimonials testimonials={STATIC_TESTIMONIALS} />
+      <FAQSection faqs={STATIC_FAQS} />
       <CTABanner />
     </>
   );

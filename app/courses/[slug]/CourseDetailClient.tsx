@@ -1,17 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState } from "react";
 import Link from "next/link";
 import {
   Star, Clock, PlayCircle, Users, CheckCircle, Lock,
   ChevronDown, GraduationCap, ShieldCheck, Smartphone,
   Infinity, ArrowLeft, FileText,
 } from "lucide-react";
-import VideoPlayer from "@/components/VideoPlayer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { createClient } from "@/lib/supabase/client";
 import InterestModal from "@/components/ui/InterestModal";
 
 type LevelVariant = "foundation" | "intermediate" | "final";
@@ -41,7 +38,7 @@ interface Section {
   id: string;
   title: string;
   sortOrder: number;
-  lessons: Lesson[];
+  lessons: readonly Lesson[];
 }
 
 interface CourseNote {
@@ -65,9 +62,9 @@ interface Course {
   instructor: string;
   rating: number;
   totalRatings: number;
-  whatYoullLearn: string[];
-  sections: Section[];
-  courseNotes: CourseNote[];
+  whatYoullLearn: readonly string[];
+  sections: readonly Section[];
+  courseNotes: readonly CourseNote[];
   _count: { enrollments: number };
 }
 
@@ -79,32 +76,19 @@ const includes = [
   { icon: GraduationCap, label: "Expert instructor" },
 ];
 
+function getYouTubeId(url: string): string | null {
+  const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|v\/))([^&?/\s]{11})/);
+  return m ? m[1] : url.length === 11 ? url : null;
+}
 
 export default function CourseDetailClient({
   course,
-  enrollmentStatus = null,
 }: {
   course: Course;
   enrollmentStatus?: "ACTIVE" | "COMPLETED" | null;
 }) {
   const [openSection, setOpenSection] = useState<number | null>(0);
-  const [_isLoggedIn, setIsLoggedIn] = useState(false);
-  const [enrollLoading, setEnrollLoading] = useState(false);
   const [isInterestModalOpen, setIsInterestModalOpen] = useState(false);
-  const router = useRouter();
-
-  const isEnrolled = !!enrollmentStatus;
-
-  useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
-      setIsLoggedIn(!!data.user);
-    });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsLoggedIn(!!session?.user);
-    });
-    return () => subscription.unsubscribe();
-  }, []);
 
   const priceRs = Math.round(course.price / 100);
   const originalPriceRs = Math.round(course.originalPrice / 100);
@@ -112,14 +96,7 @@ export default function CourseDetailClient({
   const levelVariant = levelVariantMap[course.level] || "foundation";
   const totalLessons = course.sections.reduce((sum, s) => sum + s.lessons.length, 0);
 
-  const handleEnroll = () => {
-    if (isEnrolled) {
-      setEnrollLoading(true);
-      router.push(`/dashboard/${course.id}`);
-    } else {
-      setIsInterestModalOpen(true);
-    }
-  };
+  const ytId = course.freePreviewUrl ? getYouTubeId(course.freePreviewUrl) : null;
 
   return (
     <div className="min-h-screen bg-offwhite pt-16">
@@ -221,42 +198,36 @@ export default function CourseDetailClient({
 
                     {openSection === sIdx && (
                       <div className="border-t border-gray-100">
-                        {section.lessons.map((lesson) => {
-                          return (
-                            <div
-                              key={lesson.id}
-                              className="flex items-center gap-3 px-5 py-3.5 hover:bg-offwhite border-b border-gray-50 last:border-0 transition-colors"
-                            >
-                              <div className="flex-shrink-0">
-                                {lesson.isFreePreview || isEnrolled ? (
-                                  <PlayCircle className="w-4 h-4 text-green-500" />
-                                ) : (
-                                  <Lock className="w-4 h-4 text-muted" />
-                                )}
-                              </div>
-                              <span
-                                className={`text-sm flex-1 ${
-                                  lesson.isFreePreview || isEnrolled ? "text-bodytext" : "text-muted"
-                                }`}
-                              >
-                                {lesson.title}
-                              </span>
-                              {lesson.duration && (
-                                <span className="text-xs text-muted">{lesson.duration}</span>
-                              )}
-                              {lesson.isFreePreview && (
-                                <a
-                                  href={lesson.videoUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-xs text-green-600 font-semibold bg-green-50 px-2.5 py-1 rounded-full hover:bg-green-100 transition-colors"
-                                >
-                                  Free Preview
-                                </a>
+                        {section.lessons.map((lesson) => (
+                          <div
+                            key={lesson.id}
+                            className="flex items-center gap-3 px-5 py-3.5 hover:bg-offwhite border-b border-gray-50 last:border-0 transition-colors"
+                          >
+                            <div className="flex-shrink-0">
+                              {lesson.isFreePreview ? (
+                                <PlayCircle className="w-4 h-4 text-green-500" />
+                              ) : (
+                                <Lock className="w-4 h-4 text-muted" />
                               )}
                             </div>
-                          );
-                        })}
+                            <span className={`text-sm flex-1 ${lesson.isFreePreview ? "text-bodytext" : "text-muted"}`}>
+                              {lesson.title}
+                            </span>
+                            {lesson.duration && (
+                              <span className="text-xs text-muted">{lesson.duration}</span>
+                            )}
+                            {lesson.isFreePreview && (
+                              <a
+                                href={`https://youtu.be/${lesson.videoUrl}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-green-600 font-semibold bg-green-50 px-2.5 py-1 rounded-full hover:bg-green-100 transition-colors"
+                              >
+                                Free Preview
+                              </a>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
@@ -317,13 +288,17 @@ export default function CourseDetailClient({
           {/* === RIGHT STICKY CARD === */}
           <div className="hidden lg:block">
             <div className="sticky top-24 bg-white rounded-2xl border border-gray-100 shadow-xl overflow-hidden">
-              {/* Video preview */}
-              {course.freePreviewUrl && (
-                <VideoPlayer
-                  videoUrl={course.freePreviewUrl}
-                  title="Free Preview"
-                  className="video-container"
-                />
+              {/* Free preview embed */}
+              {ytId && (
+                <div className="aspect-video">
+                  <iframe
+                    src={`https://www.youtube-nocookie.com/embed/${ytId}?rel=0&modestbranding=1`}
+                    title="Free Preview"
+                    className="w-full h-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
               )}
 
               <div className="p-6">
@@ -351,15 +326,9 @@ export default function CourseDetailClient({
                   variant="default"
                   className="w-full mb-3 text-base h-12"
                   id="course-enroll-btn"
-                  onClick={handleEnroll}
-                  loading={enrollLoading}
-                  loadingText="Please wait…"
+                  onClick={() => setIsInterestModalOpen(true)}
                 >
-                  {enrollmentStatus === "COMPLETED"
-                    ? "Review Course"
-                    : isEnrolled
-                    ? "Continue Learning"
-                    : "Enroll Now"}
+                  Enroll Now
                 </Button>
 
                 <p className="text-center text-muted text-xs mb-5">
@@ -395,15 +364,9 @@ export default function CourseDetailClient({
           variant="default"
           className="flex-1 h-12"
           id="course-enroll-mobile"
-          onClick={handleEnroll}
-          loading={enrollLoading}
-          loadingText="Please wait…"
+          onClick={() => setIsInterestModalOpen(true)}
         >
-          {enrollmentStatus === "COMPLETED"
-            ? "Review Course"
-            : isEnrolled
-            ? "Continue Learning"
-            : "Enroll Now"}
+          Enroll Now
         </Button>
       </div>
     </div>
