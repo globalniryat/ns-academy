@@ -10,7 +10,7 @@ const footerLinks = {
   ],
   Company: [
     { label: "About Us", href: "/#about" },
-    { label: "Contact", href: "mailto:contact@caportal.in" },
+    { label: "Contact", href: "/contact" },
     { label: "Blog", href: "/blog" },
   ],
   Legal: [

@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useRef } from "react";
-import Link from "next/link";
 import { motion, useInView } from "framer-motion";
 import {
   PlayCircle,
@@ -16,6 +15,7 @@ import {
   RefreshCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import EnrollButton from "@/components/ui/EnrollButton";
 
 const courseHighlights = [
   "35+ hours of structured video lectures",
@@ -147,16 +147,14 @@ export default function FeaturedCourse() {
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <Link href="/checkout/course_sfm_001">
-                    <Button
-                      size="lg"
-                      className="gap-2 w-full sm:w-auto"
-                      id="featured-course-enroll"
-                    >
-                      Enroll Now
-                      <ArrowRight className="w-5 h-5" />
-                    </Button>
-                  </Link>
+                  <EnrollButton
+                    size="lg"
+                    className="gap-2 w-full sm:w-auto"
+                    id="featured-course-enroll"
+                  >
+                    Enroll Now
+                    <ArrowRight className="w-5 h-5" />
+                  </EnrollButton>
                   <a
                     href="https://youtu.be/psQaSIotMv4"
                     target="_blank"

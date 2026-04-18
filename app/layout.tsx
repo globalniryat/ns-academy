@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Playfair_Display, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import ConditionalPublicLayout from "@/components/layout/ConditionalPublicLayout";
+import WhatsAppButton from "@/components/ui/WhatsAppButton";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -48,6 +49,7 @@ export default function RootLayout({
     >
       <body>
         <ConditionalPublicLayout>{children}</ConditionalPublicLayout>
+        <WhatsAppButton />
       </body>
     </html>
   );

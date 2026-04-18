@@ -1,11 +1,11 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { GraduationCap, Play, ArrowRight, CheckCircle, RefreshCcw, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import EnrollButton from "@/components/ui/EnrollButton";
 
 const benefits = [
   "Logic-first teaching — understand, don't memorize",
@@ -85,12 +85,10 @@ export default function HeroSection() {
 
             {/* CTAs */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
-              <Link href="/checkout/course_sfm_001">
-                <Button size="lg" variant="default" className="gap-2" id="hero-enroll-now">
-                  Enroll Now
-                  <ArrowRight className="w-5 h-5" />
-                </Button>
-              </Link>
+              <EnrollButton size="lg" variant="default" className="gap-2" id="hero-enroll-now">
+                Enroll Now
+                <ArrowRight className="w-5 h-5" />
+              </EnrollButton>
               <a
                 href="https://youtu.be/psQaSIotMv4"
                 target="_blank"

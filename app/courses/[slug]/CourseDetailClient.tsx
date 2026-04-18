@@ -12,6 +12,7 @@ import VideoPlayer from "@/components/VideoPlayer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
+import InterestModal from "@/components/ui/InterestModal";
 
 type LevelVariant = "foundation" | "intermediate" | "final";
 
@@ -87,8 +88,9 @@ export default function CourseDetailClient({
   enrollmentStatus?: "ACTIVE" | "COMPLETED" | null;
 }) {
   const [openSection, setOpenSection] = useState<number | null>(0);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [_isLoggedIn, setIsLoggedIn] = useState(false);
   const [enrollLoading, setEnrollLoading] = useState(false);
+  const [isInterestModalOpen, setIsInterestModalOpen] = useState(false);
   const router = useRouter();
 
   const isEnrolled = !!enrollmentStatus;
@@ -111,13 +113,11 @@ export default function CourseDetailClient({
   const totalLessons = course.sections.reduce((sum, s) => sum + s.lessons.length, 0);
 
   const handleEnroll = () => {
-    setEnrollLoading(true);
     if (isEnrolled) {
+      setEnrollLoading(true);
       router.push(`/dashboard/${course.id}`);
-    } else if (!isLoggedIn) {
-      router.push(`/login?redirect=/checkout/${course.id}`);
     } else {
-      router.push(`/checkout/${course.id}`);
+      setIsInterestModalOpen(true);
     }
   };
 
@@ -382,6 +382,8 @@ export default function CourseDetailClient({
           </div>
         </div>
       </div>
+
+      <InterestModal isOpen={isInterestModalOpen} onClose={() => setIsInterestModalOpen(false)} />
 
       {/* Mobile sticky bottom bar */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 shadow-2xl px-4 py-4 flex items-center gap-4">

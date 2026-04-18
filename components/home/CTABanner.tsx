@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useRef } from "react";
-import Link from "next/link";
 import { motion, useInView } from "framer-motion";
 import { ArrowRight, RefreshCcw, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import EnrollButton from "@/components/ui/EnrollButton";
 
 export default function CTABanner() {
   const ref = useRef(null);
@@ -40,17 +40,15 @@ export default function CTABanner() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
-            <Link href="/checkout/course_sfm_001">
-              <Button
-                size="lg"
-                variant="navy"
-                className="gap-2"
-                id="cta-enroll-now"
-              >
-                Enroll Now — ₹3,999
-                <ArrowRight className="w-5 h-5" />
-              </Button>
-            </Link>
+            <EnrollButton
+              size="lg"
+              variant="navy"
+              className="gap-2"
+              id="cta-enroll-now"
+            >
+              Enroll Now — ₹3,999
+              <ArrowRight className="w-5 h-5" />
+            </EnrollButton>
             <a
               href="https://youtu.be/psQaSIotMv4"
               target="_blank"

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { Menu, X, BookOpen, LogOut, User, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import EnrollButton from "@/components/ui/EnrollButton";
 import { createClient } from "@/lib/supabase/client";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
@@ -92,6 +93,7 @@ export default function Navbar() {
     { href: "/#about", label: "About" },
     { href: "/#testimonials", label: "Reviews" },
     { href: "/#faq", label: "FAQ" },
+    { href: "/contact", label: "Contact" },
   ];
 
   const isActive = (href: string) => {
@@ -224,11 +226,9 @@ export default function Navbar() {
                     Login
                   </Button>
                 </Link>
-                <Link href="/checkout/course_sfm_001">
-                  <Button variant="default" size="sm" className="gap-1.5">
-                    Enroll Now
-                  </Button>
-                </Link>
+                <EnrollButton variant="default" size="sm" className="gap-1.5">
+                  Enroll Now
+                </EnrollButton>
               </>
             )}
           </div>
@@ -316,11 +316,9 @@ export default function Navbar() {
                       Login
                     </Button>
                   </Link>
-                  <Link href="/checkout/course_sfm_001" className="block">
-                    <Button variant="default" className="w-full gap-2">
-                      Enroll Now
-                    </Button>
-                  </Link>
+                  <EnrollButton variant="default" className="w-full gap-2">
+                    Enroll Now
+                  </EnrollButton>
                 </>
               )}
             </div>
