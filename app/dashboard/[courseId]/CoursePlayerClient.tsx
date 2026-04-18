@@ -7,6 +7,7 @@ import {
   Trophy, FileText, Award,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import VideoPlayer from "@/components/VideoPlayer";
 
 interface Lesson {
   id: string;
@@ -38,18 +39,6 @@ interface Props {
   initialProgress: Record<string, boolean>;
 }
 
-// Extract YouTube video ID from any YouTube URL format or bare ID
-function extractYoutubeId(url: string): string {
-  const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube-nocookie\.com\/embed\/|youtube\.com\/embed\/)([^&?/\s]{11})/,
-    /^([a-zA-Z0-9_-]{11})$/,
-  ];
-  for (const pattern of patterns) {
-    const match = url.match(pattern);
-    if (match) return match[1];
-  }
-  return url;
-}
 
 export default function CoursePlayerClient({
   courseId,
@@ -182,8 +171,6 @@ export default function CoursePlayerClient({
     );
   }
 
-  const videoId = extractYoutubeId(activeLesson.videoUrl);
-  const videoEmbedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1`;
   const isCurrentCompleted = !!progress[activeLesson.id];
 
   return (
@@ -207,15 +194,11 @@ export default function CoursePlayerClient({
           {/* ── Left column: video + controls + notes ── */}
           <div className="lg:col-span-2 space-y-4">
             {/* Video embed */}
-            <div className="video-container rounded-xl overflow-hidden shadow-2xl">
-              <iframe
-                key={activeLesson.id}
-                src={videoEmbedUrl}
-                title={activeLesson.title}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
-            </div>
+            <VideoPlayer
+              key={activeLesson.id}
+              videoUrl={activeLesson.videoUrl}
+              title={activeLesson.title}
+            />
 
             {/* Lesson info + controls */}
             <div className="bg-navy/50 border border-white/10 rounded-xl p-5">

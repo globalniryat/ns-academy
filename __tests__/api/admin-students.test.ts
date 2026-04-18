@@ -7,14 +7,25 @@ vi.mock('@/lib/prisma', () => ({
     profile: {
       findMany: vi.fn(),
       findUnique: vi.fn(),
+      delete: vi.fn(),
     },
   },
 }))
+vi.mock('@/lib/supabase/admin', () => ({
+  createAdminClient: vi.fn(() => ({
+    auth: {
+      admin: {
+        deleteUser: vi.fn().mockResolvedValue({ error: null }),
+      },
+    },
+  })),
+}))
 
 import { GET as LIST } from '@/app/api/admin/students/route'
-import { GET as GET_ONE } from '@/app/api/admin/students/[id]/route'
+import { GET as GET_ONE, DELETE as DELETE_ONE } from '@/app/api/admin/students/[id]/route'
 import { requireAdmin } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -204,6 +215,97 @@ describe('GET /api/admin/students/[id]', () => {
     vi.mocked(prisma.profile.findUnique).mockRejectedValue(new Error('DB connection failed'))
 
     const res = await GET_ONE(new Request('http://localhost'), mockParams)
+    expect(res.status).toBe(500)
+    const json = await res.json()
+    expect(json.success).toBe(false)
+  })
+})
+
+// ── DELETE /api/admin/students/[id] ───────────────────────────────────────────
+
+describe('DELETE /api/admin/students/[id]', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('returns 401 when not authenticated', async () => {
+    mockUnauthorized()
+    const res = await DELETE_ONE(new Request('http://localhost'), mockParams)
+    expect(res.status).toBe(401)
+  })
+
+  it('returns 400 when admin tries to delete themselves', async () => {
+    vi.mocked(requireAdmin).mockResolvedValue({ userId: 'student_001' } as never)
+    const res = await DELETE_ONE(new Request('http://localhost'), mockParams)
+    expect(res.status).toBe(400)
+    const json = await res.json()
+    expect(json.error).toMatch(/own account/i)
+  })
+
+  it('returns 404 when student does not exist', async () => {
+    mockAdmin()
+    vi.mocked(prisma.profile.findUnique).mockResolvedValue(null)
+
+    const res = await DELETE_ONE(new Request('http://localhost'), mockParams)
+    expect(res.status).toBe(404)
+    const json = await res.json()
+    expect(json.error).toBe('Student not found')
+  })
+
+  it('returns 400 when trying to delete an admin account', async () => {
+    mockAdmin()
+    vi.mocked(prisma.profile.findUnique).mockResolvedValue({
+      role: 'ADMIN', email: 'admin2@example.com',
+    } as never)
+
+    const res = await DELETE_ONE(new Request('http://localhost'), mockParams)
+    expect(res.status).toBe(400)
+    const json = await res.json()
+    expect(json.error).toMatch(/admin/i)
+  })
+
+  it('deletes student from Prisma and Supabase auth on success', async () => {
+    mockAdmin()
+    vi.mocked(prisma.profile.findUnique).mockResolvedValue({
+      role: 'STUDENT', email: 'ravi.kumar@example.com',
+    } as never)
+    vi.mocked(prisma.profile.delete).mockResolvedValue(MOCK_STUDENT as never)
+    const deleteUserMock = vi.fn().mockResolvedValue({ error: null })
+    vi.mocked(createAdminClient).mockReturnValue({
+      auth: { admin: { deleteUser: deleteUserMock } },
+    } as never)
+
+    const res = await DELETE_ONE(new Request('http://localhost'), mockParams)
+    expect(res.status).toBe(200)
+    const json = await res.json()
+    expect(json.success).toBe(true)
+
+    expect(prisma.profile.delete).toHaveBeenCalledWith({ where: { id: 'student_001' } })
+    expect(deleteUserMock).toHaveBeenCalledWith('student_001')
+  })
+
+  it('still returns success if Supabase auth deletion fails (Prisma already deleted)', async () => {
+    mockAdmin()
+    vi.mocked(prisma.profile.findUnique).mockResolvedValue({
+      role: 'STUDENT', email: 'ravi.kumar@example.com',
+    } as never)
+    vi.mocked(prisma.profile.delete).mockResolvedValue(MOCK_STUDENT as never)
+    vi.mocked(createAdminClient).mockReturnValue({
+      auth: { admin: { deleteUser: vi.fn().mockResolvedValue({ error: new Error('Auth error') }) } },
+    } as never)
+
+    const res = await DELETE_ONE(new Request('http://localhost'), mockParams)
+    expect(res.status).toBe(200)
+    const json = await res.json()
+    expect(json.success).toBe(true)
+  })
+
+  it('returns 500 on database error', async () => {
+    mockAdmin()
+    vi.mocked(prisma.profile.findUnique).mockResolvedValue({
+      role: 'STUDENT', email: 'ravi.kumar@example.com',
+    } as never)
+    vi.mocked(prisma.profile.delete).mockRejectedValue(new Error('DB crash'))
+
+    const res = await DELETE_ONE(new Request('http://localhost'), mockParams)
     expect(res.status).toBe(500)
     const json = await res.json()
     expect(json.success).toBe(false)

@@ -44,6 +44,29 @@ function loadRazorpayScript(): Promise<boolean> {
   });
 }
 
+// ── Razorpay failure reason → user-friendly message ──────────────────────────
+const FAILURE_MESSAGES: Record<string, string> = {
+  international_card_not_supported:
+    "International cards are not supported. Please use an Indian debit/credit card, UPI, or Netbanking.",
+  payment_cancelled: "Payment was cancelled. You can try again when ready.",
+  insufficient_funds:
+    "Insufficient balance. Please try a different payment method.",
+  card_declined:
+    "Your card was declined by the bank. Please try another card or use UPI.",
+  invalid_otp: "Incorrect OTP entered. Please try again.",
+  card_not_enabled:
+    "Your card is not enabled for online payments. Please contact your bank or use UPI.",
+  network_error:
+    "A network error occurred. Please check your connection and try again.",
+  payment_processing_failed:
+    "The payment could not be processed. Please try again or use a different method.",
+};
+
+function getFailureMessage(reason?: string, description?: string): string {
+  if (reason && FAILURE_MESSAGES[reason]) return FAILURE_MESSAGES[reason];
+  return description || "Payment failed. Please try again or use a different payment method.";
+}
+
 export default function CheckoutClient({
   courseId, courseTitle, courseSlug, courseColor,
   price, originalPrice, duration, lessonCount,
@@ -64,7 +87,7 @@ export default function CheckoutClient({
     setLoading(true);
 
     try {
-      // Step 1: Create order on server
+      // Step 1: Create order on server (price is server-authoritative)
       const orderRes = await fetch("/api/payments/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -73,12 +96,16 @@ export default function CheckoutClient({
       const orderData = await orderRes.json();
 
       if (!orderData.success) {
+        if (orderRes.status === 409) {
+          router.push(`/dashboard/${courseId}`);
+          return;
+        }
         setError(orderData.error || "Failed to create order. Please try again.");
         setLoading(false);
         return;
       }
 
-      // Step 2: Load Razorpay script
+      // Step 2: Load Razorpay checkout.js from their CDN (PCI requirement)
       const loaded = await loadRazorpayScript();
       if (!loaded) {
         setError("Failed to load payment gateway. Please check your internet connection.");
@@ -86,10 +113,11 @@ export default function CheckoutClient({
         return;
       }
 
-      // Step 3: Open Razorpay checkout modal
+      // Step 3: Build Razorpay checkout options
       const { orderId, amount, currency, keyId } = orderData.data;
 
-      const options = {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const options: Record<string, any> = {
         key: keyId,
         amount,
         currency,
@@ -99,16 +127,14 @@ export default function CheckoutClient({
         prefill: { name: userName, email: userEmail },
         theme: { color: "#16a34a" },
         modal: {
-          ondismiss: () => {
-            setLoading(false);
-          },
+          ondismiss: () => setLoading(false),
+          confirm_close: true,
         },
         handler: async (response: {
           razorpay_payment_id: string;
           razorpay_order_id: string;
           razorpay_signature: string;
         }) => {
-          // Step 4: Verify payment on server
           try {
             const verifyRes = await fetch("/api/payments/verify", {
               method: "POST",
@@ -127,28 +153,43 @@ export default function CheckoutClient({
                 `/payment-success?course=${courseId}&title=${encodeURIComponent(courseTitle)}`
               );
             } else {
-              setError("Payment verification failed. Please contact support.");
+              setError("Payment verification failed. If money was deducted, it will be refunded automatically. Please contact support if needed.");
               setLoading(false);
             }
           } catch {
-            setError("Payment verification failed. Please contact support.");
+            setError("Payment verification failed. If money was deducted, it will be refunded automatically. Please contact support.");
             setLoading(false);
           }
         },
       };
 
+      // ── Test mode: hide UPI entirely ────────────────────────────────────────
+      // Razorpay test mode QR codes are fake — all real UPI apps reject them.
+      // The UPI collect (ID entry) flow requires a Razorpay account feature
+      // that is not available on all accounts.
+      // Solution: disable UPI in test mode and test with Card or Netbanking.
+      // In live mode this is absent — UPI works normally with real QR / intent.
+      if (isTestMode) {
+        options.method = {
+          card: true,
+          netbanking: true,
+          upi: false,
+          wallet: false,
+          emi: false,
+          paylater: false,
+        };
+      }
+
+      // Step 4: Open Razorpay checkout modal
       const rzp = new window.Razorpay(options);
-      rzp.on("payment.failed", (response: { error: { description: string; reason?: string } }) => {
-        const reason = response.error?.reason;
-        let msg = response.error?.description || "Payment failed. Please try again.";
-        if (reason === "international_card_not_supported") {
-          msg = "International cards are not supported. Please use an Indian debit/credit card or UPI.";
-        } else if (reason === "payment_cancelled") {
-          msg = "Payment was cancelled. Please try again.";
-        }
-        setError(msg);
+
+      rzp.on("payment.failed", (response: {
+        error: { code: string; description: string; reason?: string; source?: string; step?: string };
+      }) => {
+        setError(getFailureMessage(response.error?.reason, response.error?.description));
         setLoading(false);
       });
+
       rzp.open();
     } catch {
       setError("Something went wrong. Please try again.");
@@ -239,8 +280,21 @@ export default function CheckoutClient({
 
               {/* Test mode notice */}
               {isTestMode && (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-800">
-                  <strong>Test mode:</strong> Use card <code className="bg-amber-100 px-1 rounded">4111 1111 1111 1111</code>, any future expiry, CVV <code className="bg-amber-100 px-1 rounded">123</code>. No real charge.
+                <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-800 space-y-1.5">
+                  <p className="font-semibold text-amber-900">Test Mode — no real charge</p>
+                  <p>
+                    <span className="font-medium">Card:</span>{" "}
+                    <code className="bg-amber-100 px-1 rounded">4100 2800 0000 1007</code>{" "}
+                    · any future date · CVV{" "}
+                    <code className="bg-amber-100 px-1 rounded">123</code>
+                  </p>
+                  <p>
+                    <span className="font-medium">Netbanking:</span>{" "}
+                    Click Netbanking → select any bank → click &quot;Pay&quot; on the test page.
+                  </p>
+                  <p className="text-amber-600">
+                    UPI is disabled in test mode. It works normally in live mode.
+                  </p>
                 </div>
               )}
 

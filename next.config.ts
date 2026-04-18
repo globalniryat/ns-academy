@@ -18,12 +18,12 @@ const nextConfig: NextConfig = {
               "default-src 'self'",
               // Razorpay needs checkout.razorpay.com + cdn.razorpay.com + checkout-static-next.razorpay.com
               `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://checkout.razorpay.com https://cdn.razorpay.com https://checkout-static-next.razorpay.com`,
-              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://checkout.razorpay.com",
-              "font-src 'self' https://fonts.gstatic.com",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://checkout.razorpay.com https://checkout-static-next.razorpay.com",
+              "font-src 'self' https://fonts.gstatic.com https://checkout-static-next.razorpay.com",
               "img-src 'self' data: blob: https:",
-              "frame-src https://www.youtube-nocookie.com https://www.youtube.com https://api.razorpay.com https://checkout.razorpay.com",
+              "frame-src https://www.youtube-nocookie.com https://www.youtube.com https://iframe.mediadelivery.net https://player.mediadelivery.net https://api.razorpay.com https://checkout.razorpay.com https://checkout-static-next.razorpay.com",
               // Razorpay needs api.razorpay.com + lumberjack + analytics
-              "connect-src 'self' https://*.supabase.co https://api.razorpay.com https://lumberjack.razorpay.com https://checkout-static-next.razorpay.com https://cdn.razorpay.com",
+              "connect-src 'self' https://*.supabase.co https://api.razorpay.com https://lumberjack.razorpay.com https://lumberjack-cx.razorpay.com https://checkout-static-next.razorpay.com https://cdn.razorpay.com",
               "worker-src blob:",
               "object-src 'none'",
               "base-uri 'self'",
