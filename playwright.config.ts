@@ -54,13 +54,14 @@ export default defineConfig({
     },
   ],
 
-  // In CI: build then start the production server (pre-compiles all routes,
-  // eliminating lazy-compile latency that causes auth timeouts in dev mode).
+  // In CI: the workflow's "Build Next.js app" step already produced .next/.
+  // Just start the pre-built server here — rebuilding wastes 3-4 min and
+  // risks hitting the 5-min webServer timeout on slow runners.
   // Locally: reuse an already-running dev server if present.
   webServer: {
-    command: process.env.CI ? 'npm run build && npm start' : 'npm run dev',
+    command: process.env.CI ? 'npm start' : 'npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
-    timeout: process.env.CI ? 300_000 : 120_000,
+    timeout: process.env.CI ? 120_000 : 120_000,
   },
 })

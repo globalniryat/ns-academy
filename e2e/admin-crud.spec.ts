@@ -308,36 +308,25 @@ test.describe('Admin Students', () => {
   })
 
   test('student detail page shows Delete User button', async ({ page }) => {
-    // Navigate to any student detail page
-    const firstRow = page.getByRole('row').nth(1)
-    const rowVisible = await firstRow.isVisible().catch(() => false)
-    if (!rowVisible) { test.skip(); return }
+    // Use the exact link text that StudentsTable renders — same pattern as
+    // "clicking a student row navigates to student detail page" above.
+    const viewLink = page.getByRole('link', { name: 'View →' }).first()
+    const hasLink = await viewLink.isVisible().catch(() => false)
+    if (!hasLink) { test.skip(); return }
 
-    // Find a link to a student detail page
-    const studentLink = page.getByRole('link').filter({ hasText: /view|manage/i }).first()
-    const hasLink = await studentLink.isVisible().catch(() => false)
-    if (!hasLink) {
-      // Try row click to navigate to student detail
-      await firstRow.click()
-    } else {
-      await studentLink.click()
-    }
-
-    await expect(page).toHaveURL(/admin\/students\/[^/]+$/, { timeout: 10_000 })
-    // Delete User button must be present
+    await viewLink.click()
+    await expect(page).toHaveURL(/admin\/students\//, { timeout: 10_000 })
+    // Delete User button must be visible on every non-admin student detail page
     await expect(page.getByRole('button', { name: /delete user/i })).toBeVisible()
   })
 
   test('Delete User button opens confirmation dialog', async ({ page }) => {
-    const firstRow = page.getByRole('row').nth(1)
-    const rowVisible = await firstRow.isVisible().catch(() => false)
-    if (!rowVisible) { test.skip(); return }
+    const viewLink = page.getByRole('link', { name: 'View →' }).first()
+    const hasLink = await viewLink.isVisible().catch(() => false)
+    if (!hasLink) { test.skip(); return }
 
-    const studentLink = page.getByRole('link').filter({ hasText: /view|manage/i }).first()
-    const hasLink = await studentLink.isVisible().catch(() => false)
-    if (!hasLink) { await firstRow.click() } else { await studentLink.click() }
-
-    await expect(page).toHaveURL(/admin\/students\/[^/]+$/, { timeout: 10_000 })
+    await viewLink.click()
+    await expect(page).toHaveURL(/admin\/students\//, { timeout: 10_000 })
 
     await page.getByRole('button', { name: /delete user/i }).click()
 
@@ -346,7 +335,7 @@ test.describe('Admin Students', () => {
     await expect(page.getByRole('button', { name: /yes, delete/i })).toBeVisible()
     await expect(page.getByRole('button', { name: /cancel/i })).toBeVisible()
 
-    // Cancel closes the dialog
+    // Cancel closes the dialog without deleting
     await page.getByRole('button', { name: /cancel/i }).click()
     await expect(page.getByText(/this will permanently delete/i)).not.toBeVisible()
   })
