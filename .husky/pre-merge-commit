@@ -1,0 +1,33 @@
+#!/bin/sh
+# Prevents phase-1 from ever being merged into main.
+# phase-1 is a standalone marketing site — it must stay separate forever.
+
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+MERGE_HEAD_FILE=".git/MERGE_HEAD"
+
+if [ -f "$MERGE_HEAD_FILE" ]; then
+  MERGING_BRANCH=$(git name-rev --name-only "$(cat "$MERGE_HEAD_FILE")" 2>/dev/null | sed 's/~.*//' | sed 's/\^.*//')
+
+  if echo "$MERGING_BRANCH" | grep -q "phase-1"; then
+    echo ""
+    echo "╔══════════════════════════════════════════════════════════════╗"
+    echo "║  MERGE BLOCKED — phase-1 must NEVER be merged into main     ║"
+    echo "╠══════════════════════════════════════════════════════════════╣"
+    echo "║  phase-1  =  standalone Phase 1 marketing site (no DB)      ║"
+    echo "║  main     =  full Phase 2 platform (auth, payments, admin)  ║"
+    echo "║                                                              ║"
+    echo "║  These are parallel deployments for different audiences.    ║"
+    echo "║  Merging phase-1 into main WILL break the Phase 2 platform. ║"
+    echo "╚══════════════════════════════════════════════════════════════╝"
+    echo ""
+    exit 1
+  fi
+fi
+
+if [ "$CURRENT_BRANCH" = "main" ]; then
+  MERGING_BRANCH=$(git name-rev --name-only "$(cat "$MERGE_HEAD_FILE" 2>/dev/null)" 2>/dev/null | sed 's/~.*//' | sed 's/\^.*//')
+  if echo "$MERGING_BRANCH" | grep -q "phase-1"; then
+    echo "MERGE BLOCKED: phase-1 must never be merged into main."
+    exit 1
+  fi
+fi
