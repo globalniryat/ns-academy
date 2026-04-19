@@ -62,7 +62,7 @@ export default async function RootLayout({
       lang="en"
       className={`${inter.variable} ${playfair.variable} ${jakarta.variable} scroll-auto`}
     >
-      <body>
+   <body suppressHydrationWarning>
         <ConditionalPublicLayout>{children}</ConditionalPublicLayout>
         <WhatsAppButton number={whatsappNumber} message={whatsappMessage} />
         <SanityLive />

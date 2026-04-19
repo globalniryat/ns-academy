@@ -1,26 +1,13 @@
-# NS Academy — Phase 1 Marketing Site
+# NS Academy — Marketing Site
 
 Lead-capture marketing website for **CA Nikesh Shah's CA Final SFM course**.  
 Built with Next.js 16, Tailwind CSS v4, and Resend for email.
 
----
-
-## CRITICAL — Branch Rule
-
-> **NEVER merge `phase-1` into `main`. Not manually. Not via PR. Not by any tool or AI.**
-
-`phase-1` and `main` are **parallel, independent deployments** for different audiences:
-
-| Branch | What it is | Deployed to |
-|---|---|---|
-| `phase-1` | This branch — static marketing site, zero backend | Vercel (Phase 1 account) |
-| `main` | Full Phase 2 platform — auth, Supabase, Razorpay, admin | Vercel (Phase 2 account) |
-
-Merging `phase-1` into `main` **will break the Phase 2 platform** — it removes the database, auth, payments, and admin entirely. This is enforced by a git hook (`.husky/pre-merge-commit`) that will block any attempt to merge `phase-1` into `main`, including AI-generated git commands.
+> **Phase 1 is complete.** All updated code lives on `master`. This is the active, production-ready branch.
 
 ---
 
-## What's in Phase 1
+## What's in the Site
 
 ### Pages
 
@@ -134,9 +121,9 @@ Until the domain `nsacademy.in` is verified in Resend, use `onboarding@resend.de
 
 ## Deployment (Vercel)
 
-1. Push this `phase-1` branch to GitHub
+1. Push the `master` branch to GitHub
 2. Go to [vercel.com](https://vercel.com) → New Project → Import repo
-3. **Set the branch to `phase-1`** (not `main`)
+3. **Set the branch to `master`**
 4. Add environment variables:
    - `RESEND_API_KEY`
    - `NEXT_PUBLIC_APP_URL` ← set to your Vercel domain
@@ -178,8 +165,7 @@ portal/
 │   └── utils.ts                  # cn() helper
 │
 └── .husky/
-    ├── pre-commit                # ESLint + unit tests on every commit
-    └── pre-merge-commit          # BLOCKS any merge of phase-1 into main
+    └── pre-commit                # ESLint + unit tests on every commit
 ```
 
 ---
@@ -206,16 +192,6 @@ npm run test:e2e  # e2e (Playwright) — homepage, courses
 
 ---
 
-## Branch Protection
+## Branch
 
-A `pre-merge-commit` git hook (`.husky/pre-merge-commit`) is committed to this repo. It runs automatically before any merge commit is created and **blocks the merge with a clear error message** if `phase-1` is being merged into any branch.
-
-This works for:
-- Manual `git merge phase-1` commands
-- AI tools running git commands
-- Any developer attempting the merge locally
-
-For additional safety on GitHub, set a **branch protection rule** on `main`:
-- Go to repo → Settings → Branches → Add rule for `main`
-- Enable "Require pull request reviews before merging"
-- This adds a second layer of protection at the remote level
+`master` is the single active branch. All Phase 1 work is complete and merged here.
