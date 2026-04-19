@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
 import { Inter, Playfair_Display, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
+import { draftMode } from "next/headers";
+import { VisualEditing } from "next-sanity/visual-editing";
 import ConditionalPublicLayout from "@/components/layout/ConditionalPublicLayout";
 import WhatsAppButton from "@/components/ui/WhatsAppButton";
+import { SanityLive } from "@/sanity/lib/live";
+import { client } from "@/lib/sanity/client";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -24,24 +28,35 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "NS Academy — CA Finals with Simplified Logic | CA Nikesh Shah",
+  title: "NS Academy — Learn CA Final SFM Free on YouTube | CA Nikesh Shah",
   description:
-    "Pass CA Finals with logic-based teaching from CA Nikesh Shah. No memorization required. 100% money-back guarantee. Courses for CA Final SFM and more.",
+    "CA Nikesh Shah teaches the complete CA Final Strategic Financial Management series free on YouTube. Logic-first approach — zero memorization, zero prior knowledge needed.",
   keywords:
-    "CA coaching online, CA Final SFM, CA Nikesh Shah, NS Academy, Symbiosis College Pune, CA Finals coaching",
+    "CA Final SFM free YouTube, CA Nikesh Shah, NS Academy, CA Final coaching, Symbiosis College Pune",
   openGraph: {
-    title: "NS Academy — CA Finals Coaching by CA Nikesh Shah",
+    title: "NS Academy — CA Final SFM Free on YouTube by CA Nikesh Shah",
     description:
-      "Logic-first CA Finals coaching. Pass even with zero prior knowledge. 100% money-back guarantee.",
+      "Free CA Final SFM lecture series by CA Nikesh Shah. Logic-first teaching. New lectures every week.",
     type: "website",
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  let whatsappNumber = "91XXXXXXXXXX";
+  let whatsappMessage = "Hi CA Nikesh Shah, I watched your YouTube series and wanted to get in touch.";
+
+  try {
+    const content = await client.fetch(`*[_type == "siteContent"][0]{ contact }`);
+    if (content?.contact?.whatsappNumber) whatsappNumber = content.contact.whatsappNumber;
+    if (content?.contact?.whatsappMessage) whatsappMessage = content.contact.whatsappMessage;
+  } catch {
+    // Sanity not configured yet — use defaults
+  }
+
   return (
     <html
       lang="en"
@@ -49,7 +64,9 @@ export default function RootLayout({
     >
       <body>
         <ConditionalPublicLayout>{children}</ConditionalPublicLayout>
-        <WhatsAppButton />
+        <WhatsAppButton number={whatsappNumber} message={whatsappMessage} />
+        <SanityLive />
+        {(await draftMode()).isEnabled && <VisualEditing />}
       </body>
     </html>
   );

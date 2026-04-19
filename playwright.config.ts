@@ -13,10 +13,10 @@ export default defineConfig({
   // Fail the build if any test.only left in source
   forbidOnly: !!process.env.CI,
 
-  // Retry failing tests once on CI (flaky network, Supabase cold start)
+  // Retry failing tests once on CI (flaky network, cold start)
   retries: process.env.CI ? 1 : 0,
 
-  // Parallelise across workers; limit in CI to avoid DB contention
+  // Parallelise across workers; limit in CI to keep resource usage stable
   workers: process.env.CI ? 2 : undefined,
 
   reporter: [
@@ -30,7 +30,6 @@ export default defineConfig({
     trace: 'on-first-retry',
     // Capture screenshot on failure
     screenshot: 'only-on-failure',
-    // Generous timeout for Supabase auth round-trips
     actionTimeout: 15_000,
     navigationTimeout: 30_000,
   },
@@ -49,8 +48,7 @@ export default defineConfig({
         ...devices['iPhone 14'],
         browserName: 'chromium',
       },
-      // Only run auth + homepage on mobile to keep suite fast
-      testMatch: ['**/auth.spec.ts', '**/homepage.spec.ts'],
+      testMatch: ['**/homepage.spec.ts'],
     },
   ],
 

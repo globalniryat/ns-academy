@@ -20,6 +20,8 @@ export default defineConfig({
         'lib/**/*.ts',
         'app/api/**/*.ts',
         'components/ui/**/*.tsx',
+        'components/home/**/*.tsx',
+        'components/shared/**/*.tsx',
       ],
       exclude: [
         '**/*.test.ts',

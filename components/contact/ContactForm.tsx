@@ -110,10 +110,10 @@ export default function ContactForm() {
             className="w-full border border-slate-200 rounded-xl px-4 py-3 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white"
           >
             <option value="">Select a topic</option>
-            <option value="Course enrollment query">Course enrollment query</option>
-            <option value="Payment / pricing question">Payment / pricing question</option>
-            <option value="Technical issue">Technical issue</option>
-            <option value="Refund request">Refund request</option>
+            <option value="Question about the SFM series">Question about the SFM series</option>
+            <option value="Concept clarification">Concept clarification</option>
+            <option value="Feedback / Suggestions">Feedback / Suggestions</option>
+            <option value="Collaboration / Partnership">Collaboration / Partnership</option>
             <option value="Other">Other</option>
           </select>
           {errors.subject && <p className="text-red-500 text-xs mt-1">{errors.subject.message}</p>}

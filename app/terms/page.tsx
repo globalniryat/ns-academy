@@ -1,12 +1,23 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { client } from "@/lib/sanity/client";
+
+export const revalidate = 3600;
 
 export const metadata: Metadata = {
-  title: "Terms of Service — CA Portal",
-  description: "Terms of Service for CA Portal online learning platform.",
+  title: "Terms of Service — NS Academy",
+  description: "Terms of Service for NS Academy.",
 };
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  let email = "contact@nsacademy.in";
+  try {
+    const data = await client.fetch<{ contact?: { email?: string } }>(
+      `*[_type == "siteContent"][0]{ contact }`
+    );
+    if (data?.contact?.email) email = data.contact.email;
+  } catch {}
+
   return (
     <div className="min-h-screen bg-offwhite pt-24 pb-16">
       <div className="max-w-3xl mx-auto px-4 md:px-8">
@@ -19,16 +30,12 @@ export default function TermsPage() {
           <h1 className="font-heading text-3xl font-bold text-navy mb-4">Terms of Service</h1>
           <p className="text-muted text-lg mb-8">Our full terms of service are being prepared.</p>
           <p className="text-sm text-muted/70 mb-8">
-            Contact us at{" "}
-            <a href="mailto:contact@caportal.in" className="text-blue hover:underline">
-              contact@caportal.in
-            </a>{" "}
-            for any queries.
+            For any queries, contact us at{" "}
+            <a href={`mailto:${email}`} className="text-blue hover:underline">
+              {email}
+            </a>
           </p>
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 bg-navy text-white px-6 py-3 rounded-xl font-semibold hover:bg-navy/90 transition-colors"
-          >
+          <Link href="/" className="inline-flex items-center gap-2 bg-navy text-white px-6 py-3 rounded-xl font-semibold hover:bg-navy/90 transition-colors">
             ← Back to Home
           </Link>
         </div>

@@ -5,21 +5,46 @@ import { motion, useInView } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 
 export interface FAQItem {
-  id: string;
-  question: string;
-  answer: string;
+  _key?: string;
+  id?: string;
+  question?: string;
+  answer?: string;
+}
+
+export interface FAQData {
+  sectionLabel?: string;
+  heading?: string;
+  subtext?: string;
+  emailLinkText?: string;
+  email?: string;
+  items?: FAQItem[];
 }
 
 interface Props {
+  data?: FAQData;
   faqs?: FAQItem[];
 }
 
-export default function FAQSection({ faqs = [] }: Props) {
+export default function FAQSection({ data, faqs: legacyFaqs }: Props) {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-80px" });
   const [openIdx, setOpenIdx] = useState<number | null>(0);
 
-  if (faqs.length === 0) return null;
+  const sectionLabel = data?.sectionLabel ?? "GOT QUESTIONS?";
+  const heading = data?.heading ?? "Frequently Asked Questions";
+  const subtext = data?.subtext ?? "Everything you need to know.";
+  const emailLinkText = data?.emailLinkText ?? "Email us";
+  const email = data?.email ?? "contact@nsacademy.in";
+  const DEFAULT_ITEMS: FAQItem[] = [
+    { question: "What topics does the CA Final SFM series cover?", answer: "The series covers the complete CA Final SFM syllabus: Portfolio Theory & CAPM, Derivatives (Options & Futures), Foreign Exchange Management, Corporate Valuation, Mergers & Acquisitions, Interest Rate Risk Management, and more — all mapped to the ICAI exam pattern." },
+    { question: "Do I need prior finance knowledge to start?", answer: "No. The series starts from absolute zero. CA Nikesh Shah builds every concept from first principles using logic — if you understand basic arithmetic, you are ready to begin." },
+    { question: "How often are new lectures uploaded?", answer: "New lectures are added every week. Subscribe to the YouTube channel and turn on notifications so you never miss an upload." },
+    { question: "Is this useful for the ICAI CA Final exam?", answer: "Yes. Every lecture is mapped directly to the ICAI CA Final SFM syllabus. The focus is on building the kind of deep understanding that helps in both theory and numerical questions under exam pressure." },
+    { question: "Can I watch on my mobile or tablet?", answer: "Absolutely — the entire series is on YouTube and works on any device: phone, tablet, laptop, or desktop. No app, no login, no download required." },
+    { question: "How do I get help if I am stuck on a concept?", answer: "Drop a comment on the YouTube video — CA Nikesh Shah personally reads and replies to student questions. For direct queries, reach out via WhatsApp or the Contact page." },
+  ];
+
+  const items: FAQItem[] = data?.items ?? legacyFaqs ?? DEFAULT_ITEMS;
 
   return (
     <section className="py-20 md:py-28 bg-white" ref={ref} id="faq">
@@ -31,24 +56,24 @@ export default function FAQSection({ faqs = [] }: Props) {
           transition={{ duration: 0.6 }}
         >
           <p className="text-blue font-semibold text-sm uppercase tracking-widest mb-3">
-            Got Questions?
+            {sectionLabel}
           </p>
           <h2 className="font-heading text-3xl md:text-4xl font-bold text-navy mb-4">
-            Frequently Asked Questions
+            {heading}
           </h2>
           <p className="text-muted">
-            Everything you need to know before enrolling. Can&apos;t find an answer?{" "}
-            <a href="mailto:contact@nsacademy.com" className="text-blue hover:underline">
-              Email us
+            {subtext}{" "}
+            <a href={`mailto:${email}`} className="text-blue hover:underline">
+              {emailLinkText}
             </a>
             .
           </p>
         </motion.div>
 
         <div className="space-y-3">
-          {faqs.map((faq, i) => (
+          {items.map((faq, i) => (
             <motion.div
-              key={faq.id}
+              key={faq._key ?? faq.id ?? faq.question}
               className="border border-gray-200 rounded-xl overflow-hidden"
               initial={{ opacity: 0, y: 16 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
@@ -60,9 +85,7 @@ export default function FAQSection({ faqs = [] }: Props) {
               >
                 <span className="font-semibold text-navy text-sm pr-4">{faq.question}</span>
                 <ChevronDown
-                  className={`w-5 h-5 text-muted flex-shrink-0 transition-transform ${
-                    openIdx === i ? "rotate-180" : ""
-                  }`}
+                  className={`w-5 h-5 text-muted flex-shrink-0 transition-transform ${openIdx === i ? "rotate-180" : ""}`}
                 />
               </button>
               {openIdx === i && (

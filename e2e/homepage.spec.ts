@@ -1,52 +1,129 @@
 import { test, expect } from '@playwright/test'
 
-/**
- * Homepage smoke tests.
- * These run against the live page and verify the critical sections render correctly.
- */
 test.describe('Homepage', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
   })
 
-  test('page title is correct', async ({ page }) => {
+  // ── SEO & metadata ──────────────────────────────────────────────────────────
+  test('page title includes NS Academy', async ({ page }) => {
     await expect(page).toHaveTitle(/NS Academy/)
   })
 
-  test('hero section is visible', async ({ page }) => {
+  test('meta description is set', async ({ page }) => {
+    const metaDesc = page.locator('meta[name="description"]')
+    await expect(metaDesc).toHaveAttribute('content', /.{20,}/)
+  })
+
+  // ── Hero section ────────────────────────────────────────────────────────────
+  test('hero heading is visible', async ({ page }) => {
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
   })
 
-  test('Enroll Now button links to checkout', async ({ page }) => {
-    const enrollBtn = page.getByRole('link', { name: /enroll now/i }).first()
-    await expect(enrollBtn).toBeVisible()
-    await expect(enrollBtn).toHaveAttribute('href', /checkout/)
+  test('hero YouTube CTA button is present', async ({ page }) => {
+    await expect(page.locator('#hero-youtube')).toBeVisible()
   })
 
-  test('navigation links are present', async ({ page }) => {
-    await expect(page.getByRole('link', { name: /courses/i }).first()).toBeVisible()
+  test('hero contains YouTube embed', async ({ page }) => {
+     
+    const _iframe = page.frameLocator('iframe').first()
+    // The iframe exists and loads (Playwright can locate frame elements)
+    await expect(page.locator('iframe').first()).toBeVisible()
   })
 
-  test('testimonials section renders', async ({ page }) => {
-    await page.locator('section').filter({ hasText: /testimonial|student|review/i }).first().scrollIntoViewIfNeeded()
-    // Testimonials section should exist on page
-    await expect(page.locator('section').filter({ hasText: /testimonial|student|review/i }).first()).toBeVisible()
+  // ── Critical: no commerce content ──────────────────────────────────────────
+  test('no Enroll Now buttons anywhere', async ({ page }) => {
+    await expect(page.getByRole('button', { name: /enroll now/i })).toHaveCount(0)
   })
 
-  test('FAQ section renders', async ({ page }) => {
+  test('no pricing text (₹) anywhere', async ({ page }) => {
+    const bodyText = await page.locator('body').textContent()
+    expect(bodyText).not.toContain('₹')
+  })
+
+  test('no "money-back guarantee" text', async ({ page }) => {
+    const bodyText = await page.locator('body').textContent()
+    expect(bodyText?.toLowerCase()).not.toContain('money-back guarantee')
+  })
+
+  // ── Navigation ──────────────────────────────────────────────────────────────
+  test('contact link is in navigation', async ({ page }) => {
+    await expect(page.getByRole('link', { name: /contact/i }).first()).toBeVisible()
+  })
+
+  test('no Courses link in navigation', async ({ page }) => {
+    const nav = page.locator('nav').first()
+    await expect(nav.getByRole('link', { name: /^courses$/i })).toHaveCount(0)
+  })
+
+  // ── YouTube section ─────────────────────────────────────────────────────────
+  test('YouTube section is present with correct id', async ({ page }) => {
+    const section = page.locator('#youtube')
+    await section.scrollIntoViewIfNeeded()
+    await expect(section).toBeVisible()
+  })
+
+  // ── Testimonials ────────────────────────────────────────────────────────────
+  test('testimonials section is visible', async ({ page }) => {
+    const section = page
+      .locator('section')
+      .filter({ hasText: /testimonial|student stories|results/i })
+      .first()
+    await section.scrollIntoViewIfNeeded()
+    await expect(section).toBeVisible()
+  })
+
+  // ── FAQ section ─────────────────────────────────────────────────────────────
+  test('FAQ section is visible and has accordion items', async ({ page }) => {
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
-    const faqSection = page.locator('section').filter({ hasText: /frequently asked|faq/i })
-    await expect(faqSection.first()).toBeVisible()
+    const faqSection = page
+      .locator('section')
+      .filter({ hasText: /frequently asked|faq/i })
+      .first()
+    await expect(faqSection).toBeVisible()
+    // At least one FAQ button (accordion trigger) should exist
+    const faqButtons = faqSection.getByRole('button')
+    await expect(faqButtons.first()).toBeVisible()
   })
 
-  test('footer is present with company name', async ({ page }) => {
+  // ── Footer ──────────────────────────────────────────────────────────────────
+  test('footer is visible with NS Academy branding', async ({ page }) => {
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
-    await expect(page.locator('footer')).toBeVisible()
-    await expect(page.locator('footer')).toContainText(/CA Portal/)
+    const footer = page.locator('footer')
+    await expect(footer).toBeVisible()
+    await expect(footer).toContainText(/NS Academy/)
   })
 
-  test('meta description is set for SEO', async ({ page }) => {
-    const metaDesc = page.locator('meta[name="description"]')
-    await expect(metaDesc).toHaveAttribute('content', /.+/)
+  // ── WhatsApp button ─────────────────────────────────────────────────────────
+  test('WhatsApp floating button is present', async ({ page }) => {
+    const waBtn = page.locator('a[href*="wa.me"]')
+    await expect(waBtn.first()).toBeVisible()
+  })
+})
+
+test.describe('Contact page', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/contact')
+  })
+
+  test('contact page loads', async ({ page }) => {
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+  })
+
+  test('contact form is present', async ({ page }) => {
+    await expect(page.getByRole('button', { name: /send message/i })).toBeVisible()
+  })
+
+  test('no enrollment or pricing content on contact page', async ({ page }) => {
+    const bodyText = await page.locator('body').textContent()
+    expect(bodyText).not.toContain('₹')
+    expect(bodyText?.toLowerCase()).not.toContain('money-back')
+  })
+})
+
+test.describe('Studio route', () => {
+  test('studio route responds without 404', async ({ page }) => {
+    const response = await page.goto('/studio')
+    expect(response?.status()).not.toBe(404)
   })
 })

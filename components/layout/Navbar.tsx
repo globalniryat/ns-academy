@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X, BookOpen } from "lucide-react";
-import EnrollButton from "@/components/ui/EnrollButton";
+import { Menu, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -30,8 +30,7 @@ export default function Navbar() {
       return;
     }
 
-    const sectionIds = ["about", "testimonials", "faq"];
-
+    const sectionIds = ["about", "youtube", "testimonials", "faq"];
     const computeActive = () => {
       const threshold = window.scrollY + window.innerHeight * 0.3;
       let current = "";
@@ -50,6 +49,7 @@ export default function Navbar() {
   const navLinks = [
     { href: "/", label: "Home" },
     { href: "/#about", label: "About" },
+    { href: "/#youtube", label: "YouTube" },
     { href: "/#testimonials", label: "Reviews" },
     { href: "/#faq", label: "FAQ" },
     { href: "/contact", label: "Contact" },
@@ -57,9 +57,7 @@ export default function Navbar() {
 
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/" && activeSection === "";
-    if (href.startsWith("/#")) {
-      return pathname === "/" && activeSection === href.slice(2);
-    }
+    if (href.startsWith("/#")) return pathname === "/" && activeSection === href.slice(2);
     return pathname.startsWith(href);
   };
 
@@ -117,28 +115,23 @@ export default function Navbar() {
                 {link.label}
               </Link>
             ))}
-
-            {/* Courses pill */}
-            <Link
-              href="/courses"
-              className={`flex items-center gap-1.5 text-sm font-semibold px-3.5 py-1.5 rounded-full border transition-all duration-200 ${
-                pathname.startsWith("/courses")
-                  ? "bg-blue text-white border-blue shadow-sm"
-                  : isHeroMode
-                  ? "bg-white/15 text-white border-white/30 hover:bg-white/25 hover:border-white/60"
-                  : "bg-blue/10 text-blue border-blue/30 hover:bg-blue hover:text-white hover:border-blue"
-              }`}
-            >
-              <BookOpen className="w-3.5 h-3.5" />
-              Courses
-            </Link>
           </div>
 
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center gap-3">
-            <EnrollButton variant="default" size="sm" className="gap-1.5">
-              Enroll Now
-            </EnrollButton>
+            <Link href="/contact">
+              <Button
+                variant="outline"
+                size="sm"
+                className={`gap-1.5 ${
+                  isHeroMode
+                    ? "border-white/40 text-white hover:bg-white/10"
+                    : ""
+                }`}
+              >
+                Contact Us
+              </Button>
+            </Link>
           </div>
 
           {/* Mobile Hamburger */}
@@ -169,24 +162,12 @@ export default function Navbar() {
                 {link.label}
               </Link>
             ))}
-
-            {/* Courses — prominent in mobile */}
-            <Link
-              href="/courses"
-              className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
-                pathname.startsWith("/courses")
-                  ? "bg-blue text-white"
-                  : "bg-blue/10 text-blue hover:bg-blue hover:text-white"
-              }`}
-            >
-              <BookOpen className="w-4 h-4" />
-              Courses
-            </Link>
-
             <div className="pt-3 border-t border-gray-100">
-              <EnrollButton variant="default" className="w-full gap-2">
-                Enroll Now
-              </EnrollButton>
+              <Link href="/contact" className="block">
+                <Button variant="default" className="w-full gap-2">
+                  Contact Us
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
