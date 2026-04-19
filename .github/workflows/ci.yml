@@ -7,17 +7,10 @@ on:
     branches: [main, develop]
 
 jobs:
-  # ── Job 1: Fast checks (lint + types + unit tests) ──────────────────────────
-  # Runs on every push. No DB or external services needed.
+  # ── Job 1: Lint + types + unit tests ────────────────────────────────────────
   quality:
     name: Lint, Type-check & Unit Tests
     runs-on: ubuntu-latest
-
-    env:
-      # Prisma generate reads DATABASE_URL from prisma.config.ts — needs a syntactically
-      # valid URL even in CI (no real DB connection is made during generate).
-      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
-      DIRECT_URL: postgresql://ci:ci@localhost:5432/ci
 
     steps:
       - name: Checkout
@@ -31,9 +24,6 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-
-      - name: Generate Prisma client
-        run: npx prisma generate
 
       - name: Lint
         run: npm run lint -- --max-warnings=0
@@ -53,26 +43,15 @@ jobs:
           retention-days: 7
 
   # ── Job 2: E2E tests ─────────────────────────────────────────────────────────
-  # Runs only when DB credentials are available (add secrets in GitHub repo settings).
-  # Skip this job for forks / PRs from external contributors who won't have secrets.
   e2e:
     name: E2E Tests (Playwright)
     runs-on: ubuntu-latest
     needs: quality
-    # Only run E2E if secrets are configured (skip on forks / external PRs)
     if: >
       github.event_name == 'push' &&
       vars.E2E_ENABLED == 'true'
 
     env:
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      DIRECT_URL: ${{ secrets.DIRECT_URL }}
-      RAZORPAY_KEY_ID: ${{ secrets.RAZORPAY_KEY_ID }}
-      RAZORPAY_KEY_SECRET: ${{ secrets.RAZORPAY_KEY_SECRET }}
-      NEXT_PUBLIC_RAZORPAY_KEY_ID: ${{ secrets.NEXT_PUBLIC_RAZORPAY_KEY_ID }}
       CI: true
 
     steps:
@@ -95,21 +74,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Generate Prisma client
-        run: npx prisma generate
-
       - name: Install Playwright browsers (first run)
         run: npx playwright install --with-deps chromium
         if: steps.playwright-cache.outputs.cache-hit != 'true'
 
       - name: Install Playwright system deps (cached run)
-        # Chromium system libraries are OS packages — not cached — so we must
-        # install them on every run even when the browser binary is cached.
         run: npx playwright install-deps chromium
         if: steps.playwright-cache.outputs.cache-hit == 'true'
-
-      - name: Seed test data
-        run: npm run db:seed:test
 
       - name: Run E2E tests
         run: npm run test:e2e
