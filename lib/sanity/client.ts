@@ -8,7 +8,8 @@ const config = {
 
 export const client = createClient({
   ...config,
-  useCdn: true,
+  // CDN disabled in dev so changes in Sanity are immediately visible without waiting for CDN propagation
+  useCdn: process.env.NODE_ENV === 'production',
 })
 
 // Used in draft mode — can see unpublished changes
