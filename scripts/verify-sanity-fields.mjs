@@ -75,7 +75,7 @@ async function run(label, patchFields, verifyFn, restoreFields) {
     failed++
   } finally {
     if (restoreFields) {
-      try { await patch(restoreFields) } catch (_) {}
+      try { await patch(restoreFields) } catch { }
     }
   }
 }
