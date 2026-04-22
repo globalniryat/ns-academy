@@ -1,74 +1,158 @@
-# NS Academy — Marketing Site
+# NS Academy
 
-Lead-capture marketing website for **CA Nikesh Shah's CA Final SFM course**.  
-Built with Next.js 16, Tailwind CSS v4, and Resend for email.
+Marketing website for **CA Nikesh Shah's CA Final SFM course**.  
+Built with Next.js 16, Tailwind CSS v4, Sanity CMS, and Resend for email.
 
-> **Phase 1 is complete.** All updated code lives on `master`. This is the active, production-ready branch.
-
----
-
-## What's in the Site
-
-### Pages
-
-| Route | Page | Description |
-|---|---|---|
-| `/` | Landing page | Full marketing homepage — Hero, Stats bar, How It Works, Instructor Profile, Featured Course, Why Us, Testimonials, Pricing, FAQ, CTA Banner |
-| `/courses` | Courses listing | Static course card grid — links to course detail |
-| `/courses/ca-final-sfm` | Course detail | Full course page — curriculum accordion, instructor bio, free YouTube preview embed, pricing, "Enroll Now" CTA |
-| `/contact` | Contact page | WhatsApp card, email card, location, response time, contact form |
-| `/blog` | Blog | "Coming soon" placeholder |
-| `/privacy` | Privacy Policy | Static legal page |
-| `/terms` | Terms of Service | Static legal page |
-| `/refund` | Refund Policy | Static legal page |
-
-### Homepage Sections (in order)
-
-| Section | Component | What it shows |
-|---|---|---|
-| Hero | `HeroSection.tsx` | Headline, sub-headline, CTA buttons ("Enroll Now", "Watch Free Lecture"), course badge, background gradient |
-| Stats Bar | `StatsBar.tsx` | Key numbers — students enrolled, years experience, pass rate, etc. |
-| How It Works | `HowItWorks.tsx` | 3-step process: enroll → learn → pass |
-| Featured Course | `FeaturedCourse.tsx` | CA Final SFM course card with curriculum highlights, price, "Enroll Now" |
-| Instructor Profile | `InstructorProfile.tsx` | CA Nikesh Shah bio, qualifications, teaching style |
-| Why Us | `WhyUs.tsx` | Differentiators — simplified teaching, past paper focus, doubt support |
-| Testimonials | `Testimonials.tsx` | 6 student testimonials with rating, CA level, attempt |
-| Pricing | `PricingSection.tsx` | Course price (₹3,999), original price (₹8,000), included features |
-| FAQ | `FAQSection.tsx` | 6 expandable FAQs (Radix Accordion) |
-| CTA Banner | `CTABanner.tsx` | Final conversion banner — "Enroll Now" button |
-
-### Lead Capture Features
-
-| Feature | How it works |
-|---|---|
-| **Floating WhatsApp button** | Fixed bottom-right on all pages. Tapping opens a pre-filled WhatsApp chat with Nikesh. Replace `WHATSAPP_NUMBER` in `components/ui/WhatsAppButton.tsx`. |
-| **Show Interest modal** | Triggered by every "Enroll Now" button on the entire site. Collects: Name, Phone (+91), Email, CA Level, Attempt, optional Message. Submits to `/api/show-interest`. |
-| **Lead emails (Resend)** | On modal submit: (1) lead notification email to mentor with student details + one-click WhatsApp reply link; (2) confirmation email to student. |
-| **Contact form** | On `/contact` page. Collects: Name, Phone, Email, Subject, Message. Submits to `/api/contact`. Sends email to mentor with `replyTo` set to student's email. |
-
-### Navigation & Layout
-
-- **Navbar**: Transparent on homepage hero, white on scroll. Active section highlighting. Courses pill. "Enroll Now" CTA button. Mobile hamburger drawer.
-- **Footer**: Links to all pages including legal. Social links.
-- **Floating WhatsApp button**: Visible on every page, z-index above all content.
-- **ScrollToTop**: Auto-scrolls to top on route change.
-
-**Zero database. Zero auth. Zero payments. ~$0/month to run.**
+> **Phase 1 complete.** `main` is the single active branch — all code is here.
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology |
+| Layer | Technology | Version |
+|---|---|---|
+| Framework | Next.js (App Router) | 16.2.3 |
+| Language | TypeScript | ^5 |
+| Styling | Tailwind CSS | v4 |
+| Animations | Framer Motion | ^12 |
+| CMS | Sanity Studio (embedded at `/studio`) | ^5.21 |
+| CMS Client | next-sanity | ^12.3 |
+| UI Primitives | Radix UI (Accordion, Avatar, Dialog, NavigationMenu, Separator) | ^1 |
+| Forms | react-hook-form | ^7 |
+| Icons | lucide-react | ^1.8 |
+| Email | Resend | ^6 |
+| Unit Tests | Vitest + Testing Library | ^4.1 |
+| E2E Tests | Playwright | ^1.59 |
+| Linting | ESLint + lint-staged | ^9 |
+| Git Hooks | Husky | ^9 |
+| Deployment | Vercel | — |
+
+---
+
+## Pages
+
+| Route | Description |
 |---|---|
-| Framework | Next.js 16.2.3 (App Router) |
-| Language | TypeScript |
-| Styling | Tailwind CSS v4 |
-| Animations | Framer Motion |
-| UI Primitives | Radix UI (Accordion, Dialog, NavigationMenu) |
-| Forms | react-hook-form |
-| Email | Resend (free tier — 3,000 emails/month) |
-| Deployment | Vercel (free hobby plan) |
+| `/` | Homepage — all marketing sections |
+| `/contact` | Contact page with form, WhatsApp, email, location |
+| `/blog` | Blog placeholder ("Coming soon") |
+| `/privacy` | Privacy Policy (static) |
+| `/terms` | Terms of Service (static) |
+| `/refund` | Refund Policy (static) |
+| `/studio` | Sanity Studio — embedded CMS editor |
+
+---
+
+## Homepage Sections (in order)
+
+| Section | Component | CMS Group |
+|---|---|---|
+| Hero | `HeroSection.tsx` | `hero` |
+| Stats Bar | `StatsBar.tsx` | `stats` |
+| About Educator | `AboutSection.tsx` | `about` |
+| YouTube Section | `YouTubeSection.tsx` | `youtube` |
+| Video Grid | `VideoGrid.tsx` | `videos` |
+| Teaching Philosophy | `TeachingPhilosophy.tsx` | `philosophy` |
+| About Series | `AboutSeries.tsx` | `series` |
+| Who Is It For | `WhyUs.tsx` | `whoFor` |
+| Testimonials | `Testimonials.tsx` | `testimonials` |
+| FAQ | `FAQSection.tsx` | `faq` |
+| YouTube Subscribe Banner | `YouTubeSubscribeBanner.tsx` | `banner` |
+
+Every section reads data from Sanity. All sections have hardcoded defaults so the site never breaks if Sanity is unavailable.
+
+---
+
+## Sanity CMS
+
+### Studio
+
+The Sanity Studio is embedded inside the Next.js app at `/studio`.  
+All site content is managed from a **single document** of type `siteContent`.
+
+| Studio URL | Purpose |
+|---|---|
+| `http://localhost:3000/studio` | Studio home |
+| `http://localhost:3000/studio/structure/siteContent` | Edit all site content |
+| `http://localhost:3000/studio/presentation` | Live preview side-by-side with the site |
+
+Shortcut redirects are configured in `next.config.ts`:
+- `/structure/*` → `/studio/structure/*`
+- `/presentation/*` → `/studio/presentation/*`
+
+### Content Schema — `siteContent` groups
+
+| Group | Fields |
+|---|---|
+| **Hero** | `badgeText`, `headline`, `subtext`, `bulletPoints[]`, `primaryButton {text, url}`, `secondaryButton {text, url}`, `profileImage`, `youtubeVideoId`, `youtubeNote` |
+| **Stats Bar** | `stats[] {value, label}` |
+| **About Educator** | `name`, `title`, `profileImage`, `ratingBadge`, `credentialBadge`, `bio1`, `bio2`, `bio3`, `pullQuote`, `credentials[] {text}`, `badges[] {text}` |
+| **Philosophy** | `sectionLabel`, `heading`, `cards[] {icon, title, description}` |
+| **YouTube Section** | `sectionLabel`, `heading`, `subtext`, `featuredVideoId`, `channelUrl`, `playlistNote`, `ctaButton {text, url}`, `topics[] {title, description}` |
+| **Video Grid** | `heading`, `videos[] {videoId, title, duration}` |
+| **Series Info** | `heading`, `subtext`, `topics[]` |
+| **Who Is It For** | `sectionLabel`, `heading`, `cards[] {title, description}` |
+| **Testimonials** | `sectionLabel`, `heading`, `subtext`, `overallRating`, `items[] {name, college, initials, color, quote}` |
+| **FAQ** | `sectionLabel`, `heading`, `subtext`, `emailLinkText`, `email`, `items[] {question, answer}` |
+| **Contact** | `whatsappNumber`, `whatsappMessage`, `email`, `location` |
+| **Footer** | `tagline`, `youtubeUrl`, `instagramUrl`, `linkedinUrl` |
+| **Subscribe Banner** | `text`, `button {text, url}` |
+
+### Live Preview
+
+The Presentation Tool in the Studio allows side-by-side live preview:
+- Enable draft mode via `/api/draft-mode/enable`
+- Disable via `/api/draft-mode/disable`
+- Live updates powered by `SanityLive` component (rendered in root layout)
+- `draftClient` uses `perspective: 'previewDrafts'` and `useCdn: false`
+
+### Cache & Revalidation
+
+- Pages use `export const revalidate = 60` (ISR — rebuild every 60 seconds)
+- On Sanity content publish, a webhook calls `POST /api/revalidate?secret=<SANITY_REVALIDATE_SECRET>`
+- Revalidation clears the Next.js data cache for `/` (layout) and `/contact`
+- In **development**, `useCdn: false` is set automatically so changes appear instantly
+
+**Webhook setup in Sanity:**
+1. Go to [sanity.io](https://sanity.io) → your project → API → Webhooks
+2. URL: `https://your-domain.vercel.app/api/revalidate?secret=NsAcademy`
+3. Trigger on: `publish` of `siteContent`
+
+---
+
+## API Routes
+
+| Route | Method | Purpose |
+|---|---|---|
+| `/api/contact` | POST | Contact form — emails mentor via Resend. Fields: `name`, `email`, `phone`, `subject`, `message` |
+| `/api/show-interest` | POST | Lead capture form — emails mentor + confirmation to student. Fields: `name`, `phone`, `email`, `caLevel`, `attempt`, `message` |
+| `/api/revalidate` | POST | Sanity webhook — clears ISR cache. Requires `?secret=` query param |
+| `/api/draft-mode/enable` | GET | Enables Next.js draft mode for Sanity live preview |
+| `/api/draft-mode/disable` | GET | Disables draft mode, redirects to `/` |
+
+Email sender: `NS Academy <leads@nsacademy.in>`  
+Mentor email: `nikesh@nsacademy.in`
+
+---
+
+## Lead Capture
+
+| Feature | Details |
+|---|---|
+| **Floating WhatsApp button** | Fixed bottom-right on every page. Number and pre-filled message come from Sanity `contact.whatsappNumber` + `contact.whatsappMessage` |
+| **Show Interest form** | On `/contact` — collects Name, Phone, Email, CA Level, Attempt, Message. Sends lead email to mentor (with one-click WhatsApp reply link) + confirmation email to student |
+| **Contact form** | Also on `/contact` — collects Name, Phone, Email, Subject, Message. Sends email to mentor with `replyTo` set to student's email |
+
+---
+
+## Navigation & Layout
+
+- **Navbar** (`Navbar.tsx`): Transparent on hero, white on scroll. Mobile hamburger drawer. Links to Contact, Blog, YouTube.
+- **Footer** (`Footer.tsx`): Links to all pages + legal. Social links (YouTube, Instagram, LinkedIn).
+- **WhatsApp button**: Rendered in root layout, visible on every page.
+- **ScrollToTop** (`ScrollToTop.tsx`): Auto-scrolls to top on route change.
+- **SectionErrorBoundary**: Wraps every homepage section — if one section crashes, the rest still render.
+- **CSP headers**: Strict Content Security Policy on all routes. Studio has a permissive policy to allow Sanity CDN scripts. HSTS enabled in production.
 
 ---
 
@@ -77,18 +161,25 @@ Built with Next.js 16, Tailwind CSS v4, and Resend for email.
 ### 1. Install dependencies
 
 ```bash
-cd portal
 npm install
 ```
 
 ### 2. Configure environment variables
 
-Edit `.env.local`:
+Create `.env.local`:
 
 ```env
-# Get from https://resend.com → API Keys (free)
-RESEND_API_KEY=re_your_key_here
+# Sanity
+NEXT_PUBLIC_SANITY_PROJECT_ID=i9bqo0t1
+NEXT_PUBLIC_SANITY_DATASET=production
+NEXT_PUBLIC_SANITY_API_VERSION=2024-01-01
+SANITY_API_TOKEN=sk...          # from sanity.io → project → API → Tokens
+SANITY_REVALIDATE_SECRET=NsAcademy
 
+# Resend
+RESEND_API_KEY=re_...           # from resend.com → API Keys
+
+# App
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 NEXT_PUBLIC_APP_NAME=NS Academy
 ```
@@ -99,99 +190,188 @@ NEXT_PUBLIC_APP_NAME=NS Academy
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000) — the site.  
+Open [http://localhost:3000/studio](http://localhost:3000/studio) — the CMS.
 
 ---
 
-## Before Going Live — Replace These Placeholders
+## Scripts
 
-| File | Find | Replace with |
-|---|---|---|
-| `components/ui/WhatsAppButton.tsx` | `WHATSAPP_NUMBER = "91XXXXXXXXXX"` | CA Nikesh Shah's number e.g. `919876543210` |
-| `app/contact/page.tsx` | `WHATSAPP_NUMBER`, `EMAIL` | Real contact details |
-| `app/api/show-interest/route.ts` | `MENTOR_EMAIL`, `FROM_EMAIL` | Real email + Resend sender |
-| `app/api/contact/route.ts` | `MENTOR_EMAIL`, `FROM_EMAIL` | Same |
-| `.env.local` | `RESEND_API_KEY=re_xxx...` | Real key from resend.com |
-
-### Resend sender domain
-
-Until the domain `nsacademy.in` is verified in Resend, use `onboarding@resend.dev` as `FROM_EMAIL` for testing — it delivers to your Resend account email.
+```bash
+npm run dev              # start dev server
+npm run build            # production build
+npm run start            # start production server
+npm run lint             # ESLint
+npm run type-check       # TypeScript check (tsc --noEmit)
+npm test                 # unit tests (Vitest)
+npm run test:watch       # Vitest in watch mode
+npm run test:coverage    # unit tests with coverage report
+npm run test:e2e         # E2E tests (Playwright, requires running dev server)
+npm run test:e2e:headed  # E2E with browser visible
+npm run test:all         # unit + E2E
+node scripts/verify-sanity-fields.mjs  # verify all 51 Sanity fields live on localhost
+```
 
 ---
 
-## Deployment (Vercel)
+## Tests
 
-1. Push the `master` branch to GitHub
-2. Go to [vercel.com](https://vercel.com) → New Project → Import repo
-3. **Set the branch to `master`**
-4. Add environment variables:
-   - `RESEND_API_KEY`
-   - `NEXT_PUBLIC_APP_URL` ← set to your Vercel domain
-   - `NEXT_PUBLIC_APP_NAME=NS Academy`
-5. Deploy
+### Unit tests (Vitest)
+
+```
+__tests__/
+├── api/
+│   ├── contact.test.ts         # POST /api/contact
+│   └── revalidate.test.ts      # POST /api/revalidate
+├── components/
+│   ├── badge.test.tsx
+│   └── button.test.tsx
+├── home/
+│   └── sections.test.tsx       # CMS resilience — every section renders with null/empty/partial data
+├── lib/
+│   └── utils.test.ts
+└── sanity/
+    └── field-rendering.test.tsx  # 74 field tests — every Sanity field renders in the DOM
+```
+
+**180 tests, 7 test files.**
+
+### E2E tests (Playwright — Chromium)
+
+```
+e2e/
+├── homepage.spec.ts        # SEO, Hero, Nav, YouTube, Testimonials, FAQ, Footer, WhatsApp
+└── sanity-content.spec.ts  # 28 tests — every CMS section visible on live site, revalidation webhook, draft mode
+```
+
+### Sanity field verification script
+
+`scripts/verify-sanity-fields.mjs` — patches each of the 51 Sanity fields with a unique test value, triggers revalidation, fetches the page, and confirms the value appears. Restores all original values at the end.
+
+```bash
+node scripts/verify-sanity-fields.mjs
+```
 
 ---
 
 ## Project Structure
 
 ```
-portal/
+ns-academy/
 ├── app/
-│   ├── page.tsx                  # Homepage
-│   ├── courses/
-│   │   ├── page.tsx              # Course listing (static)
-│   │   └── [slug]/page.tsx       # Course detail (static)
-│   ├── contact/page.tsx          # Contact page
-│   ├── api/
-│   │   ├── show-interest/        # Lead capture — emails Nikesh + student
-│   │   └── contact/              # Contact form — emails Nikesh
-│   ├── blog/page.tsx
+│   ├── page.tsx                        # Homepage — fetches all Sanity data, renders sections
+│   ├── layout.tsx                      # Root layout — Navbar, Footer, WhatsAppButton, SanityLive
+│   ├── contact/page.tsx                # Contact page
+│   ├── blog/page.tsx                   # Blog placeholder
 │   ├── privacy/page.tsx
 │   ├── terms/page.tsx
-│   └── refund/page.tsx
+│   ├── refund/page.tsx
+│   ├── studio/[[...tool]]/page.tsx     # Embedded Sanity Studio
+│   └── api/
+│       ├── contact/route.ts            # Contact form email
+│       ├── show-interest/route.ts      # Lead capture email
+│       ├── revalidate/route.ts         # Sanity webhook → ISR revalidation
+│       └── draft-mode/
+│           ├── enable/route.ts
+│           └── disable/route.ts
 │
 ├── components/
-│   ├── home/                     # All homepage sections (Hero, Stats, FAQ, etc.)
-│   ├── layout/                   # Navbar, Footer, ConditionalPublicLayout
-│   ├── contact/ContactForm.tsx
-│   ├── courses/CourseCard.tsx
+│   ├── home/                           # One file per homepage section
+│   │   ├── HeroSection.tsx
+│   │   ├── StatsBar.tsx
+│   │   ├── AboutSection.tsx
+│   │   ├── YouTubeSection.tsx
+│   │   ├── VideoGrid.tsx
+│   │   ├── TeachingPhilosophy.tsx
+│   │   ├── AboutSeries.tsx
+│   │   ├── WhyUs.tsx
+│   │   ├── Testimonials.tsx
+│   │   ├── FAQSection.tsx
+│   │   └── YouTubeSubscribeBanner.tsx
+│   ├── layout/
+│   │   ├── Navbar.tsx
+│   │   ├── Footer.tsx
+│   │   └── ConditionalPublicLayout.tsx
+│   ├── contact/
+│   │   └── ContactForm.tsx
+│   ├── shared/
+│   │   ├── SectionErrorBoundary.tsx
+│   │   ├── AnimateOnScroll.tsx
+│   │   ├── ScrollToTop.tsx
+│   │   └── SectionHeading.tsx
 │   └── ui/
-│       ├── WhatsAppButton.tsx    # Floating WhatsApp CTA
-│       ├── InterestModal.tsx     # Lead capture form modal
-│       └── EnrollButton.tsx      # Drop-in button → opens InterestModal
+│       ├── WhatsAppButton.tsx
+│       ├── badge.tsx
+│       ├── button.tsx
+│       ├── card.tsx
+│       ├── input.tsx
+│       └── label.tsx
 │
 ├── lib/
-│   ├── static-data.ts            # All content: course, testimonials, FAQs
-│   └── utils.ts                  # cn() helper
+│   └── sanity/
+│       ├── client.ts       # Sanity client (useCdn: false in dev, true in prod)
+│       ├── queries.ts      # SITE_CONTENT_QUERY — fetches full siteContent document
+│       ├── types.ts        # TypeScript interfaces for all CMS data
+│       └── image.ts        # urlFor() image URL builder
 │
+├── sanity/
+│   ├── schemaTypes/
+│   │   ├── index.ts
+│   │   └── siteContent.ts  # Full schema — all 13 groups and 50+ fields
+│   ├── lib/
+│   │   ├── client.ts       # Studio-side Sanity client
+│   │   ├── image.ts
+│   │   └── live.ts         # SanityLive + sanityFetch (real-time updates)
+│   ├── structure.ts        # Studio sidebar structure
+│   └── env.ts              # Env var validation
+│
+├── scripts/
+│   └── verify-sanity-fields.mjs   # End-to-end field verification (51 fields)
+│
+├── __tests__/              # Vitest unit tests
+├── e2e/                    # Playwright E2E tests
+├── sanity.config.ts        # Sanity Studio config (Structure + Presentation tools)
+├── next.config.ts          # Next.js config (redirects, image domains, CSP headers)
+├── vitest.config.ts
+├── playwright.config.ts
 └── .husky/
-    └── pre-commit                # ESLint + unit tests on every commit
+    └── pre-commit          # Runs lint-staged (ESLint) + Vitest on every commit
 ```
 
 ---
 
-## Updating Content
+## Deployment (Vercel)
 
-All course, testimonial, and FAQ content lives in [`lib/static-data.ts`](lib/static-data.ts).
+1. Push `main` branch to GitHub
+2. Go to [vercel.com](https://vercel.com) → New Project → Import `globalniryat/ns-academy`
+3. Set Production Branch to `main`
+4. Add all environment variables (see list above)
+5. Deploy
 
-- **Course details** (price, title, curriculum) → `STATIC_COURSE`
-- **Courses listing card** → `STATIC_COURSE_CARD`
-- **Testimonials** → `STATIC_TESTIMONIALS`
-- **FAQs** → `STATIC_FAQS`
-
-Edit that file and redeploy — no database changes needed.
+**After deploying**, set up the Sanity revalidation webhook so content changes go live immediately:
+- URL: `https://<your-vercel-domain>/api/revalidate?secret=NsAcademy`
+- Trigger: document published, type `siteContent`
 
 ---
 
-## Tests
+## Git Flow
+
+```
+main      ← production, deployed to Vercel
+develop   ← integration branch
+feature/* ← individual features (git flow feature start <name>)
+bugfix/*  ← bug fixes
+release/* ← release preparation
+hotfix/*  ← urgent production fixes
+```
 
 ```bash
-npm test          # unit tests (Vitest) — badge, button, utils
-npm run test:e2e  # e2e (Playwright) — homepage, courses
+git flow feature start my-feature
+git flow feature finish my-feature   # merges into develop
 ```
 
 ---
 
 ## Branch
 
-`master` is the single active branch. All Phase 1 work is complete and merged here.
+`main` is the production branch. `develop` is the integration branch. All work goes through `develop` before merging to `main`.
